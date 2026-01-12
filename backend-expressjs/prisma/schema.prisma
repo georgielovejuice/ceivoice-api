@@ -7,17 +7,22 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/* ===== MODELS START HERE ===== */
+/**
+ * ===== MODELS START HERE =====
+ */
 
 model User {
-  user_id     Int      @id @default(autoincrement())
-  email       String   @unique
-  name        String?
-  role        String
+  user_id    Int      @id @default(autoincrement())
+  email      String   @unique
+  name       String?
+  role       String   @default("USER")
   created_at DateTime @default(now())
 
-  comments        Comment[]
-  statusChanges   StatusHistory[] @relation("StatusChangedBy")
+  comments      Comment[]
+  statusChanges StatusHistory[] @relation("StatusChangedBy")
+
+  assignmentOld AssignmentHistory[] @relation("OldAssignee")
+  assignmentNew AssignmentHistory[] @relation("NewAssignee")
 }
 
 model Request {
@@ -30,14 +35,14 @@ model Request {
 }
 
 model Ticket {
-  ticket_id          Int      @id @default(autoincrement())
-  title              String   @db.VarChar(100)
-  summary            String   @db.VarChar(500)
+  ticket_id          Int       @id @default(autoincrement())
+  title              String    @db.VarChar(100)
+  summary            String    @db.VarChar(500)
   suggested_solution String
   status             String
   deadline           DateTime?
-  created_at         DateTime @default(now())
-  updated_at         DateTime @updatedAt
+  created_at         DateTime  @default(now())
+  updated_at         DateTime  @updatedAt
 
   category_id Int
   category    Category @relation(fields: [category_id], references: [category_id])
@@ -56,10 +61,10 @@ model Category {
 }
 
 model Comment {
-  comment_id Int      @id @default(autoincrement())
-  content    String
+  comment_id  Int      @id @default(autoincrement())
+  content     String
   is_internal Boolean
-  created_at DateTime @default(now())
+  created_at  DateTime @default(now())
 
   ticket_id Int
   user_id   Int
@@ -74,7 +79,7 @@ model StatusHistory {
   new_status String
   changed_at DateTime @default(now())
 
-  ticket_id Int
+  ticket_id  Int
   changed_by Int
 
   ticket Ticket @relation(fields: [ticket_id], references: [ticket_id])
@@ -99,4 +104,7 @@ model AssignmentHistory {
   changed_at      DateTime @default(now())
 
   ticket Ticket @relation(fields: [ticket_id], references: [ticket_id])
+
+  oldAssignee User? @relation("OldAssignee", fields: [old_assignee_id], references: [user_id])
+  newAssignee User  @relation("NewAssignee", fields: [new_assignee_id], references: [user_id])
 }
