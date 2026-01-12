@@ -1,7 +1,8 @@
 const express = require("express");
 const router = express.Router();
-const controller = require("../controllers/ticket.controller");
+const ticketController = require("../controllers/ticket.controller");
 
-router.post("/:id/status", controller.updateStatus);
+router.post("/:id/status", ticketController.updateStatus);
+router.patch("/:id/status", ticketController.updateStatus);
 
 module.exports = router;

@@ -1,43 +1,25 @@
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
+const { changeTicketStatus } = require("../services/ticket.service");
 
 exports.updateStatus = async (req, res) => {
   try {
     const ticketId = parseInt(req.params.id);
-    const { new_status, user_id } = req.body;
+    const { new_status } = req.body;
 
-    if (!new_status || !user_id) {
-      return res.status(400).json({ error: "new_status and user_id required" });
+    // TEMP: until auth middleware is added
+    const userId = req.user?.user_id ?? 0;
+
+    if (!new_status) {
+      return res.status(400).json({ error: "new_status required" });
     }
 
-    const ticket = await prisma.ticket.findUnique({
-      where: { ticket_id: ticketId }
-    });
-
-    if (!ticket) {
-      return res.status(404).json({ error: "Ticket not found" });
-    }
-
-    // Update ticket status
-    await prisma.ticket.update({
-      where: { ticket_id: ticketId },
-      data: { status: new_status }
-    });
-
-    // Log history (audit)
-    await prisma.statusHistory.create({
-      data: {
-        ticket_id: ticketId,
-        old_status: ticket.status,
-        new_status,
-        changed_by: user_id
-      }
+    await changeTicketStatus({
+      ticketId,
+      newStatus: new_status.toUpperCase(),
+      changedBy: userId
     });
 
     res.json({ message: "Status updated successfully" });
-
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(400).json({ error: err.message });
   }
 };
