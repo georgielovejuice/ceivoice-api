@@ -53,3 +53,15 @@ exports.approveDraft = async (ticketId, adminId) => {
 
   return { success: true };
 };
+
+exports.getActiveTickets = () => {
+  return prisma.ticket.findMany({
+    where: {
+      status: { not: "DRAFT" }
+    },
+    orderBy: { created_at: "desc" },
+    include: {
+      category: true
+    }
+  });
+};

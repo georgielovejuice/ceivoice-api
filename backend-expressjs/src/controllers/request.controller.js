@@ -4,6 +4,10 @@ const aiService = require("../services/ai.service");
 
 exports.submitRequest = async (req, res) => {
   try {
+    if (!req.body) {
+      return res.status(400).json({ error: "Request body missing" });
+    }
+    
     const { email, message } = req.body;
 
     if (!email || !message) {
@@ -24,7 +28,7 @@ exports.submitRequest = async (req, res) => {
         title: ai.title,
         summary: ai.summary,
         suggested_solution: ai.suggested_solution,
-        status: "Draft",
+        status: "DRAFT",
         category_id: ai.category_id
       }
     });
@@ -44,6 +48,6 @@ exports.submitRequest = async (req, res) => {
 
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Internal server error : " + err.message });
   }
 };

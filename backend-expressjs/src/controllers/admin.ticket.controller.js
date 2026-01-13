@@ -1,5 +1,6 @@
 const adminTicketService = require("../services/admin.ticket.service");
 
+// list draft tickets
 exports.listDrafts = async (req, res) => {
   try {
     const drafts = await adminTicketService.getDraftTickets();
@@ -10,6 +11,7 @@ exports.listDrafts = async (req, res) => {
   }
 };
 
+// update a draft ticket
 exports.updateDraft = async (req, res) => {
   try {
     const ticketId = parseInt(req.params.id);
@@ -26,6 +28,7 @@ exports.updateDraft = async (req, res) => {
   }
 };
 
+// approve a draft ticket
 exports.approveDraft = async (req, res) => {
   try {
     const ticketId = parseInt(req.params.id);
@@ -40,4 +43,15 @@ exports.approveDraft = async (req, res) => {
     res.status(400).json({ error: err.message });
   }
 };
+
+// list active tickets
+exports.listActiveTickets = async (req, res) => {
+  try {
+    const tickets = await adminTicketService.getActiveTickets();
+    res.json(tickets);
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 

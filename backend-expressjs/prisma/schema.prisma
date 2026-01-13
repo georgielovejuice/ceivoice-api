@@ -108,3 +108,5 @@ model AssignmentHistory {
   oldAssignee User? @relation("OldAssignee", fields: [old_assignee_id], references: [user_id])
   newAssignee User  @relation("NewAssignee", fields: [new_assignee_id], references: [user_id])
 }
+
+
