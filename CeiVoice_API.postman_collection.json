@@ -1,0 +1,562 @@
+{
+  "info": {
+    "name": "CeiVoice Backend API",
+    "description": "Complete API collection for ticket management system",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Email Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"name\": \"Test User\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/auth/login",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Get Google Auth URL",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:5000/api/auth/google",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "auth", "google"]
+            }
+          }
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/auth/me",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "auth", "me"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Requests (EP01)",
+      "item": [
+        {
+          "name": "Submit Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"customer@example.com\",\n  \"message\": \"I need help with my account\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/requests",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "requests"]
+            }
+          }
+        },
+        {
+          "name": "Track Request",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:5000/api/requests/track/{{tracking_id}}",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "requests", "track", "{{tracking_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tickets (EP03-EP05)",
+      "item": [
+        {
+          "name": "Get Draft Tickets",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:5000/api/tickets/drafts",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "tickets", "drafts"]
+            }
+          }
+        },
+        {
+          "name": "Get Ticket by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:5000/api/tickets/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "tickets", "1"]
+            }
+          }
+        },
+        {
+          "name": "Edit Draft Ticket",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Title\",\n  \"summary\": \"Updated summary\",\n  \"category_id\": 1\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/tickets/drafts/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "tickets", "drafts", "1"]
+            }
+          }
+        },
+        {
+          "name": "Set Deadline",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deadline\": \"2026-03-15T10:00:00Z\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/tickets/1/deadline",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "tickets", "1", "deadline"]
+            }
+          }
+        },
+        {
+          "name": "Merge Requests",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_id\": 1,\n  \"request_ids\": [1, 2, 3]\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/tickets/merge",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "tickets", "merge"]
+            }
+          }
+        },
+        {
+          "name": "Unlink Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_id\": 1,\n  \"request_id\": 2\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/tickets/unlink",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "tickets", "unlink"]
+            }
+          }
+        },
+        {
+          "name": "Submit Draft to New Ticket",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "http://localhost:5000/api/tickets/1/submit",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "tickets", "1", "submit"]
+            }
+          }
+        },
+        {
+          "name": "Get Assignee Workload",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:5000/api/tickets/assignee/1/workload",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "tickets", "assignee", "1", "workload"]
+            }
+          }
+        },
+        {
+          "name": "Update Ticket Status",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"new_status\": \"Assigned\",\n  \"user_id\": 1\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/tickets/1/status",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "tickets", "1", "status"]
+            }
+          }
+        },
+        {
+          "name": "Get Status History",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:5000/api/tickets/1/status-history",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "tickets", "1", "status-history"]
+            }
+          }
+        },
+        {
+          "name": "Reassign Ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assignee_ids\": [1, 2],\n  \"user_id\": 3\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/tickets/1/reassign",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "tickets", "1", "reassign"]
+            }
+          }
+        },
+        {
+          "name": "Get Assignment History",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:5000/api/tickets/1/assignment-history",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "tickets", "1", "assignment-history"]
+            }
+          }
+        },
+        {
+          "name": "Get Comments",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:5000/api/tickets/1/comments",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "tickets", "1", "comments"]
+            }
+          }
+        },
+        {
+          "name": "Add Comment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": 1,\n  \"content\": \"This is a comment\",\n  \"is_internal\": false\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/tickets/1/comments",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "tickets", "1", "comments"]
+            }
+          }
+        },
+        {
+          "name": "Get Ticket Participants",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:5000/api/tickets/1/participants",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "tickets", "1", "participants"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin (EP06)",
+      "item": [
+        {
+          "name": "Toggle Assignee Role",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": 1,\n  \"is_assignee\": true\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/admin/assignees/role",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "admin", "assignees", "role"]
+            }
+          }
+        },
+        {
+          "name": "Assign Scope",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": 1,\n  \"scope_name\": \"IT\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/admin/assignees/scope",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "admin", "assignees", "scope"]
+            }
+          }
+        },
+        {
+          "name": "Get All Assignees",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/admin/assignees",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "admin", "assignees"]
+            }
+          }
+        },
+        {
+          "name": "Admin Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/admin/reports/dashboard",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "admin", "reports", "dashboard"]
+            }
+          }
+        },
+        {
+          "name": "Assignee Metrics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/admin/reports/assignee/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "admin", "reports", "assignee", "1"]
+            }
+          }
+        },
+        {
+          "name": "Audit Trail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/admin/audit-trail/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "admin", "audit-trail", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:5000/api/users/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "users", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get User Notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/users/1/notifications",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "users", "1", "notifications"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "jwt_token",
+      "value": ""
+    },
+    {
+      "key": "tracking_id",
+      "value": ""
+    }
+  ]
+}
