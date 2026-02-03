@@ -1,6 +1,6 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
-const { changeTicketStatus } = require("./ticket.service");
+const { changeTicketStatus } = require("./ticket");
 
 exports.getDraftTickets = async () => {
   return prisma.ticket.findMany({

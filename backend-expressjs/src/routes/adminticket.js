@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const adminTicketController = require("../controllers/admin.ticket.controller");
+const adminTicketController = require("../controllers/adminticket");
 const { authenticate, authorize } = require("../middlewares/auth.middleware");
 
 // Apply authentication and authorization middleware

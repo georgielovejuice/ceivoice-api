@@ -1,4 +1,4 @@
-const adminTicketService = require("../services/admin.ticket.service");
+const adminTicketService = require("../services/adminticket");
 
 // list draft tickets
 exports.listDrafts = async (req, res) => {

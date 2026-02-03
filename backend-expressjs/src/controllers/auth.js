@@ -1,6 +1,6 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
-const authService = require("../services/auth.service");
+const authService = require("../services/auth");
 
 exports.googleLogin = async (req, res) => {
   try {

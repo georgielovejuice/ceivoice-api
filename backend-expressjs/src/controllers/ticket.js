@@ -1,4 +1,4 @@
-const { changeTicketStatus } = require("../services/ticket.service");
+const { changeTicketStatus } = require("../services/ticket");
 
 exports.updateStatus = async (req, res) => {
   try {

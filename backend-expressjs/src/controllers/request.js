@@ -1,6 +1,6 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
-const aiService = require("../services/ai.service");
+const aiService = require("../services/ai");
 
 exports.submitRequest = async (req, res) => {
   try {
