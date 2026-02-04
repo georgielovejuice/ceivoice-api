@@ -1,13 +1,16 @@
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
-const authService = require("../services/auth");
+import { Request, Response } from "express";
+import { PrismaClient } from "@prisma/client";
+import * as authService from "../services/auth.service";
 
-exports.googleLogin = async (req, res) => {
+const prisma = new PrismaClient();
+
+export const googleLogin = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id_token } = req.body;
 
     if (!id_token) {
-      return res.status(400).json({ error: "id_token required" });
+      res.status(400).json({ error: "id_token required" });
+      return;
     }
 
     const result = await authService.googleLogin(id_token);
@@ -18,8 +21,13 @@ exports.googleLogin = async (req, res) => {
   }
 };
 
-exports.me = async (req, res) => {
+export const me = async (req: Request, res: Response): Promise<void> => {
   try {
+    if (!req.user) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
     const user = await prisma.user.findUnique({
       where: { user_id: req.user.user_id },
       select: {
@@ -32,11 +40,13 @@ exports.me = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(404).json({ error: "User not found" });
+      res.status(404).json({ error: "User not found" });
+      return;
     }
 
     res.json(user);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Internal server error" });
   }
 };

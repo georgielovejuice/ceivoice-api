@@ -1,13 +1,21 @@
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
-const { AllowedTransitions, RoleTransitions } = require("../constants/ticketStatus");
+import { PrismaClient } from "@prisma/client";
+import { AllowedTransitions, RoleTransitions, TicketStatus, UserRole } from "../constants/ticketStatus";
 
-exports.changeTicketStatus = async ({
+const prisma = new PrismaClient();
+
+export interface ChangeTicketStatusParams {
+  ticketId: number;
+  newStatus: TicketStatus;
+  changedBy: number;
+  userRole?: UserRole;
+}
+
+export const changeTicketStatus = async ({
   ticketId,
   newStatus,
   changedBy,
-  userRole
-}) => {
+  userRole = "USER"
+}: ChangeTicketStatusParams): Promise<void> => {
   return prisma.$transaction(async (tx) => {
     const ticket = await tx.ticket.findUnique({
       where: { ticket_id: ticketId }
@@ -17,7 +25,7 @@ exports.changeTicketStatus = async ({
       throw new Error("Ticket not found");
     }
 
-    const currentStatus = ticket.status;
+    const currentStatus = ticket.status as TicketStatus;
 
     // Global state machine validation
     const allowedTransitions = AllowedTransitions[currentStatus] || [];

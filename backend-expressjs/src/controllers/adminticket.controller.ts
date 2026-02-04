@@ -1,7 +1,7 @@
-const adminTicketService = require("../services/adminticket");
+import { Request, Response } from "express";
+import * as adminTicketService from "../services/adminticket.service";
 
-// list draft tickets
-exports.listDrafts = async (req, res) => {
+export const listDrafts = async (_req: Request, res: Response): Promise<void> => {
   try {
     const drafts = await adminTicketService.getDraftTickets();
     res.json(drafts);
@@ -11,10 +11,9 @@ exports.listDrafts = async (req, res) => {
   }
 };
 
-// update a draft ticket
-exports.updateDraft = async (req, res) => {
+export const updateDraft = async (req: Request, res: Response): Promise<void> => {
   try {
-    const ticketId = parseInt(req.params.id);
+    const ticketId = parseInt(req.params.id, 10);
     const updateData = req.body;
 
     const updatedTicket = await adminTicketService.updateDraftTicket(
@@ -24,34 +23,31 @@ exports.updateDraft = async (req, res) => {
 
     res.json(updatedTicket);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    const error = err as Error;
+    res.status(400).json({ error: error.message });
   }
 };
 
-// approve a draft ticket
-exports.approveDraft = async (req, res) => {
+export const approveDraft = async (req: Request, res: Response): Promise<void> => {
   try {
-    const ticketId = parseInt(req.params.id);
-
-    // TEMP until auth middleware exists
+    const ticketId = parseInt(req.params.id, 10);
     const adminId = req.user?.user_id || 0;
 
     const result = await adminTicketService.approveDraft(ticketId, adminId);
 
     res.json(result);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    const error = err as Error;
+    res.status(400).json({ error: error.message });
   }
 };
 
-// list active tickets
-exports.listActiveTickets = async (req, res) => {
+export const listActiveTickets = async (_req: Request, res: Response): Promise<void> => {
   try {
     const tickets = await adminTicketService.getActiveTickets();
     res.json(tickets);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Internal server error" });
   }
 };
-
-

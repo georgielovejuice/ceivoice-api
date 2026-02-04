@@ -1,17 +1,21 @@
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
-const aiService = require("../services/ai");
+import { Request, Response } from "express";
+import { PrismaClient } from "@prisma/client";
+import * as aiService from "../services/ai.service";
 
-exports.submitRequest = async (req, res) => {
+const prisma = new PrismaClient();
+
+export const submitRequest = async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.body) {
-      return res.status(400).json({ error: "Request body missing" });
+      res.status(400).json({ error: "Request body missing" });
+      return;
     }
-    
+
     const { email, message } = req.body;
 
     if (!email || !message) {
-      return res.status(400).json({ error: "Email and message are required" });
+      res.status(400).json({ error: "Email and message are required" });
+      return;
     }
 
     // 1. Save raw request
@@ -20,16 +24,16 @@ exports.submitRequest = async (req, res) => {
     });
 
     // 2. AI draft
-    const ai = aiService.generateDraft(message);
+    const aiDraft = aiService.generateDraft(message);
 
     // 3. Create draft ticket
     const ticket = await prisma.ticket.create({
       data: {
-        title: ai.title,
-        summary: ai.summary,
-        suggested_solution: ai.suggested_solution,
+        title: aiDraft.title,
+        summary: aiDraft.summary,
+        suggested_solution: aiDraft.suggested_solution,
         status: "DRAFT",
-        category_id: ai.category_id
+        category_id: aiDraft.category_id
       }
     });
 
@@ -45,9 +49,9 @@ exports.submitRequest = async (req, res) => {
       message: "Request submitted successfully",
       ticket_id: ticket.ticket_id
     });
-
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Internal server error : " + err.message });
+    const error = err as Error;
+    res.status(500).json({ error: `Internal server error: ${error.message}` });
   }
 };
