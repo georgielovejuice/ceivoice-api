@@ -1,85 +1,140 @@
+/**
+ * Authentication Middleware
+ * Passport.js integration for route protection
+ * - JWT Bearer token validation
+ * - Role-based authorization
+ * - Optional authentication
+ */
+
 import { Request, Response, NextFunction } from "express";
-import * as authService from "../services/auth.service";
+import passport from "passport";
+import type { UserProfile } from "../config/passport";
 
-export interface AuthPayload {
-  user_id: number;
-  email: string;
-  role: "USER" | "ASSIGNEE" | "ADMIN";
-}
+// ===== JWT AUTHENTICATION MIDDLEWARE =====
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: AuthPayload;
-      userId?: number;
-      email?: string;
+/**
+ * Authenticate using JWT Bearer token
+ * Expected header: Authorization: Bearer <token>
+ * Requires valid JWT token in Authorization header
+ */
+export const authenticate = (req: any, res: Response, next: NextFunction): void => {
+  passport.authenticate("jwt", { session: false }, (err: any, user: UserProfile | false, info: any) => {
+    if (err) {
+      return res.status(500).json({ error: "Authentication error" });
     }
-  }
-}
 
-export const authenticate = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void => {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader) {
-    res.status(401).json({ error: "No token provided" });
-    return;
-  }
-
-  const token = authHeader.split(" ")[1];
-
-  try {
-    const decoded = authService.verifyToken(token);
-    if (!decoded) {
-      res.status(401).json({ error: "Invalid token" });
-      return;
+    if (!user) {
+      return res.status(401).json({
+        error: "Unauthorized",
+        message: info?.message || "Invalid or missing token"
+      });
     }
-    
-    req.user = decoded as AuthPayload;
-    req.userId = decoded.user_id;
-    req.email = decoded.email;
+
+    // Attach user to request
+    req.user = user;
+    req.userId = user.user_id;
+    req.email = user.email;
+
     next();
-  } catch (err) {
-    res.status(401).json({ error: "Invalid token" });
-  }
+  })(req, res, next);
 };
 
-export const authorize = (roles: string[]) => {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    if (!req.user || !roles.includes(req.user.role)) {
-      res.status(403).json({ error: "Forbidden - Insufficient permissions" });
+/**
+ * Optional JWT authentication
+ * Attaches user if valid token provided, otherwise continues
+ */
+export const authenticateOptional = (req: any, res: Response, next: NextFunction): void => {
+  passport.authenticate("jwt", { session: false }, (err: any, user: UserProfile | false) => {
+    if (err) {
+      console.error("Optional auth error:", err);
+      return next();
+    }
+
+    if (user) {
+      req.user = user;
+      req.userId = user.user_id;
+      req.email = user.email;
+    }
+
+    next();
+  })(req, res, next);
+};
+
+// ===== AUTHORIZATION MIDDLEWARE =====
+
+/**
+ * Role-based authorization
+ * Restricts access to specified roles
+ * Must be used after authenticate middleware
+ * 
+ * Example: authorize(["ADMIN", "ASSIGNEE"])
+ */
+export const authorize = (allowedRoles: string[]) => {
+  return (req: any, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      res.status(401).json({ error: "Unauthorized" });
       return;
     }
+
+    const userRole = (req.user as any)?.role;
+    if (!allowedRoles.includes(userRole)) {
+      res.status(403).json({
+        error: "Forbidden",
+        message: `This action requires one of the following roles: ${allowedRoles.join(", ")}`
+      });
+      return;
+    }
+
     next();
   };
 };
 
-export const authenticateOptional = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void => {
-  const authHeader = req.headers.authorization;
+/**
+ * Require specific role
+ * Convenience wrapper for single role check
+ */
+export const requireRole = (role: string) => {
+  return authorize([role]);
+};
 
-  if (!authHeader) {
-    next();
+/**
+ * Require Admin access
+ * Shorthand for authorize(["ADMIN"])
+ */
+export const requireAdmin = (req: any, res: Response, next: NextFunction): void => {
+  if (!req.user) {
+    res.status(401).json({ error: "Unauthorized" });
     return;
   }
 
-  const token = authHeader.split(" ")[1];
+  if (!["ADMIN"].includes((req.user as any)?.role)) {
+    res.status(403).json({
+      error: "Forbidden",
+      message: "This action requires admin privileges"
+    });
+    return;
+  }
 
-  try {
-    const decoded = authService.verifyToken(token);
-    if (decoded) {
-      req.user = decoded as AuthPayload;
-      req.userId = decoded.user_id;
-      req.email = decoded.email;
-    }
-  } catch (err) {
-    // Ignore errors for optional auth
+  next();
+};
+
+/**
+ * Assignee or Admin access
+ * Shorthand for authorize(["ASSIGNEE", "ADMIN"])
+ */
+export const requireAssignee = (req: any, res: Response, next: NextFunction): void => {
+  if (!req.user) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  const userRole = (req.user as any)?.role;
+  if (!["ASSIGNEE", "ADMIN"].includes(userRole)) {
+    res.status(403).json({
+      error: "Forbidden",
+      message: "This action requires assignee or admin privileges"
+    });
+    return;
   }
 
   next();

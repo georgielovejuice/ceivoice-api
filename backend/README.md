@@ -1,342 +1,266 @@
-# CeiVoice API Backend - Merged Edition
+# CeiVoice API Backend
 
-This is a unified, production-ready TypeScript Express.js backend that combines features from both the original `backend-expressjs` and `backend-old-typescript` implementations. It follows Express.js conventions with a clean, maintainable architecture.
+A production-ready TypeScript Express.js API with Passport.js JWT authentication, PostgreSQL database, and comprehensive ticket management system.
 
-## 🎯 Features
+## 🎯 Core Features
 
-### Authentication & Authorization
-- **Google OAuth 2.0 Integration** - Secure Google authentication with ID token verification
-- **Email/Password Authentication** - Local registration and login with bcrypt password hashing
-- **JWT Token Management** - Bearer token authentication with configurable expiration
-- **Tracking Tokens** - Special tokens for request tracking with 90-day expiration
-- **Role-Based Access Control** - USER, ASSIGNEE, and ADMIN roles with middleware-based authorization
+### Authentication (Passport.js + JWT)
+- **Email/Password Auth** - Registration & login with bcryptjs hashing
+- **Google OAuth 2.0** - Secure Google authentication with account linking
+- **JWT Tokens** - Access tokens (7d) + Refresh tokens (30d)
+- **Role-Based Access** - ADMIN, ASSIGNEE, USER roles
+- **Tracking Tokens** - Public request tracking (90d expiry)
 
 ### Ticket Management
-- **Draft Ticket Management** - Create and edit tickets before publishing
-- **Status Tracking** - Comprehensive ticket status lifecycle (Draft → New → Assigned → Solving → Solved/Failed → Renew)
-- **AI-Powered Suggestions** - Automatic draft generation, category suggestion, and solution recommendations
-- **Comment System** - Public and internal comments with user tracking
-- **Assignment Management** - Assign tickets to assignees with assignment history
-- **Deadline Management** - Set and track ticket deadlines
-- **Follower System** - Track interested users per ticket
+- **Draft System** - Create & edit tickets before publishing
+- **Status Lifecycle** - Draft → New → Assigned → Solving → Solved/Failed → Renew
+- **AI Integration** - Auto-generate drafts, suggest categories & solutions
+- **Assignments** - Track assignees with history
+- **Comments** - Public & internal comments with audit trail
+- **Followers** - Users can track ticket progress
+- **Deadlines** - Set & track ticket deadlines
 
 ### Request Processing
-- **Request Submission** - Users can submit requests with email verification
-- **Tracking IDs** - Unique tracking IDs for request tracking without authentication
-- **Email Notifications** - Confirmation, status change, and comment notifications
-- **Request-Ticket Linking** - Link multiple requests to single tickets
+- **Public Submissions** - Users submit requests with email verification
+- **Tracking IDs** - Track requests without authentication
+- **Auto-Ticketing** - Requests automatically create draft tickets
+- **Notifications** - Email confirmations & status updates
 
 ### Admin Features
-- **Ticket Statistics** - View ticket metrics by status, category, and date range
-- **Assignee Management** - Manage assignee roles and assign scopes
-- **Draft Approval Workflow** - Review and approve draft tickets
-- **Notification Management** - User notification system with read status tracking
-- **Assignee Performance Metrics** - Track metrics like current, solved, and failed tickets
-
-### Database
-- **PostgreSQL with Prisma ORM** - Type-safe database access with migrations
-- **Comprehensive Schema** - Users, Tickets, Requests, Comments, Assignments, Notifications, and more
-- **Referential Integrity** - Cascade deletes and proper foreign key relationships
-- **Indexing** - Strategic indexes for performance optimization
+- **Statistics Dashboard** - Ticket metrics by status, category, date
+- **Assignee Management** - Manage roles & scopes
+- **Workflow Approval** - Review & approve draft tickets
+- **Performance Metrics** - Track assignee performance
 
 ## 📦 Tech Stack
 
-- **Runtime**: Node.js with TypeScript
-- **Framework**: Express.js 5.x
-- **ORM**: Prisma Client 6.x
-- **Database**: PostgreSQL
-- **Authentication**: JWT, Google OAuth 2.0, bcryptjs
-- **Email**: Nodemailer
-- **Utilities**: axios, uuid, email-validator
-- **Development**: ts-node, nodemon, TypeScript
+| Layer | Technology |
+|-------|-----------|
+| Runtime | Node.js + TypeScript |
+| Framework | Express.js 5.x |
+| ORM | Prisma 6.x |
+| Database | PostgreSQL |
+| Auth | Passport.js + JWT + bcryptjs |
+| Email | Nodemailer |
+| Dev | ts-node, nodemon |
 
-## 🚀 Getting Started
+## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js (v16 or higher)
-- PostgreSQL database
-- npm or pnpm package manager
-- Google OAuth credentials (for Google login)
+- Node.js v16+
+- PostgreSQL
+- Google OAuth credentials (optional for dev mode)
 
-### Installation
+### Setup (5 minutes)
 
-1. **Clone and navigate to backend directory**
-   ```bash
-   cd ceivoice-api/backend
-   ```
+```bash
+# 1. Install dependencies
+npm install
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   # or
-   pnpm install
-   ```
+# 2. Configure environment
+cp .env.example .env
+# Edit .env with your DATABASE_URL and other settings
 
-3. **Set up environment variables**
-   ```bash
-   cp .env.example .env
-   ```
-   Edit `.env` with your configuration:
-   - Database URL
-   - JWT secret
-   - Google OAuth credentials
-   - Email settings
-   - Frontend URL
+# 3. Setup database
+npm run prisma:migrate
+npm run prisma:generate
 
-4. **Set up the database**
-   ```bash
-   # Create initial migration
-   npm run prisma:migrate
-
-   # Generate Prisma client
-   npm run prisma:generate
-
-   # Open Prisma Studio to view data
-   npm run prisma:studio
-   ```
-
-5. **Start development server**
-   ```bash
-   npm run dev
-   ```
-   Server will run on `http://localhost:5000`
-
-## 📚 API Endpoints
-
-### Authentication Routes (`/api/auth`)
-```
-POST   /auth/google-login         Login with Google ID token
-POST   /auth/register             Register with email/password
-POST   /auth/login                Login with email/password
-GET    /auth/me                   Get current user (requires auth)
+# 4. Start server
+npm run dev
+# Server runs on http://localhost:5000
 ```
 
-### Request Routes (`/api/requests`)
-```
-POST   /requests                  Submit a new request (public)
-GET    /requests/track/:tracking_id  Track request status (public)
-GET    /requests                  Get all requests (admin only)
-POST   /requests/verify-token     Verify tracking token
-```
-
-### Ticket Routes (`/api/tickets`)
-```
-GET    /tickets/:id               Get ticket details
-GET    /tickets?status=Draft      Get tickets by status
-PUT    /tickets/:id               Edit draft ticket (admin)
-PUT    /tickets/:id/deadline      Set ticket deadline (admin)
-PATCH  /tickets/:id/status        Update ticket status (admin)
-POST   /tickets/:id/assign        Assign ticket to user
-POST   /tickets/:id/unassign      Unassign ticket from user
-POST   /tickets/:id/comments      Add comment to ticket
-GET    /tickets/:id/comments      Get ticket comments
-POST   /tickets/:id/followers     Follow a ticket
-GET    /tickets/:id/followers     Get ticket followers
+### Scripts
+```bash
+npm run dev              # Development with hot reload
+npm run build            # Build for production
+npm start                # Run built code
+npm run start:prod       # Build + start
+npm run prisma:migrate   # Run database migrations
+npm run prisma:generate  # Generate Prisma types
+npm run prisma:studio    # Open Prisma UI
 ```
 
-### Admin Routes (`/api/admin`)
-```
-GET    /admin/drafts              List draft tickets
-PUT    /admin/drafts/:id          Update draft ticket
-POST   /admin/drafts/:id/approve  Approve draft ticket
-GET    /admin/active              List active tickets
-POST   /admin/:id/assign          Assign ticket to user
-GET    /admin/assignees           Get all assignees
-GET    /admin/stats               Get ticket statistics
-GET    /admin/notifications       Get user notifications
-PUT    /admin/notifications/:id/read  Mark notification as read
-```
+## 📚 API Reference
+
+### Authentication Endpoints
+| Method | Path | Description | Auth |
+|--------|------|-------------|------|
+| POST | `/api/auth/register` | Register with email/password | ❌ |
+| POST | `/api/auth/login` | Login with email/password | ❌ |
+| POST | `/api/auth/refresh` | Refresh access token | ❌ |
+| GET | `/api/auth/google` | Google OAuth start | ❌ |
+| GET | `/api/auth/google/callback` | Google OAuth callback | ❌ |
+| GET | `/api/auth/me` | Get current user | ✅ |
+| POST | `/api/auth/logout` | Logout | ✅ |
+
+### Request Endpoints
+| Method | Path | Description | Auth |
+|--------|------|-------------|------|
+| POST | `/api/requests` | Submit request | ❌ |
+| GET | `/api/requests/track/:id` | Track request | ❌ |
+| POST | `/api/requests/verify-token` | Verify token | ❌ |
+| GET | `/api/requests` | List all (admin) | ✅ ADMIN |
+
+### Ticket Endpoints
+| Method | Path | Description | Auth |
+|--------|------|-------------|------|
+| GET | `/api/tickets/:id` | Get ticket details | ✅ |
+| GET | `/api/tickets` | List tickets | ✅ |
+| PUT | `/api/tickets/:id` | Update ticket | ✅ ADMIN |
+| POST | `/api/tickets/:id/assign` | Assign ticket | ✅ |
+| POST | `/api/tickets/:id/comments` | Add comment | ✅ |
+| GET | `/api/tickets/:id/comments` | Get comments | ✅ |
+
+### Admin Endpoints
+| Method | Path | Description | Auth |
+|--------|------|-------------|------|
+| GET | `/api/admin/drafts` | List drafts | ✅ ADMIN |
+| POST | `/api/admin/drafts/:id/approve` | Approve draft | ✅ ADMIN |
+| GET | `/api/admin/stats` | Get statistics | ✅ ADMIN |
+| GET | `/api/admin/assignees` | List assignees | ✅ ADMIN |
 
 ## 🏗️ Project Structure
 
 ```
-backend/
-├── src/
-│   ├── controllers/          # Request handlers
-│   │   ├── auth.controller.ts
-│   │   ├── ticket.controller.ts
-│   │   ├── request.controller.ts
-│   │   └── adminticket.controller.ts
-│   ├── services/            # Business logic
-│   │   ├── auth.service.ts
-│   │   ├── db.service.ts
-│   │   ├── email.service.ts
-│   │   ├── ai.service.ts
-│   │   └── oauth.service.ts
-│   ├── routes/              # API routes
-│   │   ├── auth.route.ts
-│   │   ├── ticket.route.ts
-│   │   ├── request.route.ts
-│   │   └── adminticket.route.ts
-│   ├── middlewares/         # Express middlewares
-│   │   └── auth.middleware.ts
-│   ├── constants/           # Constants and enums
-│   │   └── ticketStatus.ts
-│   ├── app.ts              # Express app configuration
-│   └── server.ts           # Server entry point
-├── prisma/
-│   ├── schema.prisma       # Database schema
-│   └── migrations/         # Database migrations
-├── package.json
-├── tsconfig.json
-├── .env.example
-└── README.md
+src/
+├── config/
+│   ├── environment.ts    # Config management
+│   └── passport.ts       # Passport strategies (JWT, Local, Google)
+├── controllers/          # Request handlers
+│   ├── auth.controller.ts
+│   ├── ticket.controller.ts
+│   ├── request.controller.ts
+│   └── adminticket.controller.ts
+├── services/            # Business logic
+│   ├── auth.service.ts          # Auth utilities & token mgmt
+│   ├── db.service.ts            # Database queries
+│   ├── email.service.ts         # Email sending
+│   └── ai.service.ts            # AI utilities
+├── routes/              # API route definitions
+├── middlewares/         # Express middleware
+│   └── auth.middleware.ts       # Passport auth middleware
+├── constants/           # Constants
+├── app.ts              # Express app config
+└── server.ts           # Entry point
+
+prisma/
+├── schema.prisma        # Database schema
+└── migrations/          # Migration files
 ```
 
-## 🔐 Authentication Modes
+## 🔐 Authentication Guide
 
-### Development Mode (AUTH_MODE=DEV)
-When `AUTH_MODE=DEV`, the system bypasses Google OAuth verification and creates test users:
-- Admin user: `admin@test.com` (when `DEV_ROLE=ADMIN`)
-- Regular user: `user@test.com` (when `DEV_ROLE=USER`)
+### Passport.js + JWT Implementation
+- **Strategy**: JWT Bearer tokens in Authorization header
+- **Format**: `Authorization: Bearer <token>`
+- **Access Token**: Valid for 7 days
+- **Refresh Token**: Valid for 30 days
 
-Perfect for local development and testing.
-
-### Production Mode (AUTH_MODE=PRODUCTION)
-Requires valid Google OAuth credentials. Tokens are verified against Google's API.
-
-## 📝 Environment Variables
-
-### Required
-- `DATABASE_URL` - PostgreSQL connection string
-- `JWT_SECRET` - Secret key for JWT signing
-- `GOOGLE_CLIENT_ID` - Google OAuth client ID
-
-### Optional
-- `PORT` - Server port (default: 5000)
-- `NODE_ENV` - Environment (development/production)
-- `GOOGLE_CLIENT_SECRET` - Google OAuth secret (required in production)
-- `EMAIL_SERVICE` - Email service provider (default: gmail)
-- `EMAIL_USER` - Email account for sending notifications
-- `EMAIL_PASSWORD` - Email account password/app password
-- `FRONTEND_URL` - Frontend URL for email links
-- `AUTH_MODE` - Authentication mode (DEV/PRODUCTION)
-- `DEV_ROLE` - Default role in dev mode (ADMIN/USER)
-
-## 🧪 Testing the API
-
-### Using cURL
-
+### Register & Login
 ```bash
-# Register new user
+# Register
 curl -X POST http://localhost:5000/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "fullName": "John Doe",
     "email": "john@example.com",
-    "password": "password123",
-    "confirmPassword": "password123"
+    "password": "test123",
+    "confirmPassword": "test123"
   }'
 
-# Login with email/password
+# Login
 curl -X POST http://localhost:5000/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{
-    "email": "john@example.com",
-    "password": "password123"
-  }'
+  -d '{"email": "john@example.com", "password": "test123"}'
+```
 
-# Submit a request
-curl -X POST http://localhost:5000/api/requests \
+### Using Tokens
+```bash
+# Access protected endpoint
+curl -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  http://localhost:5000/api/auth/me
+
+# Refresh token
+curl -X POST http://localhost:5000/api/auth/refresh \
   -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "message": "I have an issue with the system"
-  }'
-
-# Track request
-curl http://localhost:5000/api/requests/track/[TRACKING_ID]
+  -d '{"refreshToken": "YOUR_REFRESH_TOKEN"}'
 ```
 
-### Using Postman
-Import the Postman collection from `CeiVoice_API.postman_collection.json` for comprehensive API testing.
+### Using in Routes
+```typescript
+import { authenticate, authorize } from "../middlewares/auth.middleware";
 
-## 🔄 Database Migrations
+// Require authentication
+router.get("/protected", authenticate, controller.handler);
 
-### Create a new migration
-```bash
-npm run prisma:migrate -- --name descriptive_name
+// Role-based access
+router.delete("/admin", authenticate, authorize(["ADMIN"]), controller.handler);
 ```
 
-### View database with Prisma Studio
-```bash
-npm run prisma:studio
+For detailed auth documentation, see `QUICK_REFERENCE.md`
+
+## ⚙️ Configuration
+
+### Required Environment Variables
+```env
+DATABASE_URL=postgresql://user:pass@localhost/dbname
+JWT_SECRET=your-strong-secret-min-32-chars
+GOOGLE_CLIENT_ID=your-google-client-id
 ```
 
-### Reset database (development only)
-```bash
-npx prisma migrate reset
+### Optional Environment Variables
+```env
+PORT=5000
+NODE_ENV=development
+JWT_ACCESS_TOKEN_EXPIRY=7d
+JWT_REFRESH_TOKEN_EXPIRY=30d
+GOOGLE_CLIENT_SECRET=your-google-secret
+GOOGLE_CALLBACK_URL=http://localhost:5000/api/auth/google/callback
+CORS_ORIGIN=http://localhost:3000
+EMAIL_SERVICE=gmail
+EMAIL_USER=your-email@gmail.com
+EMAIL_PASSWORD=your-app-password
 ```
 
-## 📊 Database Schema
+See `.env.example` for all options.
 
-The database includes the following main entities:
-- **User** - System users with roles and authentication data
-- **Ticket** - Support tickets with status and assignments
-- **Request** - User-submitted requests linked to tickets
-- **Comment** - Internal and public comments on tickets
-- **Category** - Ticket categorization
-- **StatusHistory** - Audit trail of ticket status changes
-- **AssignmentHistory** - Audit trail of ticket assignments
-- **TicketAssignment** - Current ticket-assignee relationships
-- **Follower** - Users following tickets
-- **Notification** - User notifications
-- **AssigneeScope** - Scope restrictions for assignees
-- **OAuthToken** - Stored OAuth tokens
+## 🤝 Development
 
-## 🤝 Contributing
-
-When adding new features:
-1. Add database schema changes to `prisma/schema.prisma`
-2. Create a migration: `npm run prisma:migrate`
-3. Implement business logic in `services/`
-4. Add controller endpoints in `controllers/`
+### Adding Features
+1. Update `prisma/schema.prisma` if needed
+2. Run migrations: `npm run prisma:migrate`
+3. Add logic to `services/`
+4. Create endpoints in `controllers/`
 5. Define routes in `routes/`
-6. Add middleware if needed in `middlewares/`
+6. Add middleware in `middlewares/` if needed
 
-## 📝 Code Style
-
+### Code Style
 - TypeScript for type safety
-- Async/await for asynchronous operations
-- Error handling with try/catch blocks
-- Meaningful variable and function names
-- Service layer for business logic separation
+- Service layer for business logic
+- Async/await for async operations
+- Error handling with try/catch
+- Meaningful names
 
-## 🐛 Troubleshooting
+## ❓ Troubleshooting
 
-### Port already in use
-```bash
-# Change the port in .env or use a different port
-PORT=5001 npm run dev
-```
-
-### Database connection error
-```bash
-# Check DATABASE_URL in .env
-# Ensure PostgreSQL is running
-# Verify database exists and credentials are correct
-```
-
-### Prisma client out of sync
-```bash
-npm run prisma:generate
-```
-
-### Migration conflicts
-```bash
-npx prisma migrate resolve --rolled-back [migration_name]
-```
-
-## 📄 License
-
-This project is provided as-is for the CeiVoice platform.
+| Issue | Solution |
+|-------|----------|
+| Port in use | Change PORT in .env or `PORT=5001 npm run dev` |
+| DB connection error | Check DATABASE_URL, ensure PostgreSQL running |
+| Prisma out of sync | Run `npm run prisma:generate` |
+| 401 Unauthorized | Include `Authorization: Bearer <token>` header |
+| 403 Forbidden | User lacks required role |
 
 ## 📞 Support
 
-For issues or questions, please contact the development team.
+See the detailed documentation:
+- **QUICK_REFERENCE.md** - Auth quick reference & examples
+- **AUTH_IMPLEMENTATION.md** - Comprehensive auth guide
+- Prisma documentation: https://www.prisma.io/docs/
 
 ---
 
-**Last Updated**: 2026-02-09  
-**Version**: 1.0.0  
-**Status**: Production Ready ✅
+**Last Updated**: February 10, 2026  
+**Version**: 2.0.0 (Passport.js Integration Complete)  
+**Status**: ✅ Production Ready

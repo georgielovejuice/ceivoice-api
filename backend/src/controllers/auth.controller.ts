@@ -1,30 +1,21 @@
+/**
+ * Authentication Controller
+ * Handles all authentication-related HTTP requests
+ * - User registration and login
+ * - Token refresh
+ * - User profile retrieval
+ */
+
 import { Request, Response } from "express";
 import * as authService from "../services/auth.service";
-import * as dbService from "../services/db.service";
-import * as validator from "email-validator";
-
-// ===== GOOGLE OAUTH LOGIN =====
-export const googleLogin = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
-  try {
-    const { id_token } = req.body;
-
-    if (!id_token) {
-      res.status(400).json({ error: "id_token required" });
-      return;
-    }
-
-    const result = await authService.googleLogin(id_token);
-    res.json(result);
-  } catch (err) {
-    console.error(err);
-    res.status(401).json({ error: "Invalid Google token" });
-  }
-};
 
 // ===== EMAIL/PASSWORD REGISTRATION =====
+
+/**
+ * Register new user with email and password
+ * Body: { fullName, email, password, confirmPassword }
+ * Returns: { accessToken, refreshToken, user }
+ */
 export const register = async (
   req: Request,
   res: Response
@@ -38,20 +29,8 @@ export const register = async (
       return;
     }
 
-    if (!validator.validate(email)) {
-      res.status(400).json({ error: "Invalid email format" });
-      return;
-    }
-
     if (password !== confirmPassword) {
       res.status(400).json({ error: "Passwords do not match" });
-      return;
-    }
-
-    if (password.length < 6) {
-      res.status(400).json({
-        error: "Password must be at least 6 characters long"
-      });
       return;
     }
 
@@ -60,16 +39,23 @@ export const register = async (
       password,
       fullName
     );
+
     res.status(201).json(result);
   } catch (err) {
     const error = err as Error;
-    console.error(err);
+    console.error("Registration error:", err);
     res.status(400).json({ error: error.message });
   }
 };
 
 // ===== EMAIL/PASSWORD LOGIN =====
-export const loginWithPassword = async (
+
+/**
+ * Login with email and password
+ * Body: { email, password }
+ * Returns: { accessToken, refreshToken, user }
+ */
+export const login = async (
   req: Request,
   res: Response
 ): Promise<void> => {
@@ -86,12 +72,46 @@ export const loginWithPassword = async (
     res.json(result);
   } catch (err) {
     const error = err as Error;
-    console.error(err);
+    console.error("Login error:", err);
     res.status(401).json({ error: error.message || "Invalid credentials" });
   }
 };
 
+// ===== REFRESH TOKEN =====
+
+/**
+ * Refresh access token using refresh token
+ * Body: { refreshToken }
+ * Returns: { accessToken, user }
+ */
+export const refresh = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      res.status(400).json({ error: "Refresh token is required" });
+      return;
+    }
+
+    const result = await authService.refreshAccessToken(refreshToken);
+    res.json(result);
+  } catch (err) {
+    const error = err as Error;
+    console.error("Token refresh error:", err);
+    res.status(401).json({ error: error.message || "Failed to refresh token" });
+  }
+};
+
 // ===== GET CURRENT USER =====
+
+/**
+ * Get current authenticated user profile
+ * Requires: Valid JWT token in Authorization header
+ * Returns: { user_id, email, name, role, is_assignee, created_at }
+ */
 export const me = async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.user) {
@@ -99,7 +119,7 @@ export const me = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const user = await authService.getUserById(req.user.user_id);
+    const user = await authService.getUserById((req.user as any).user_id);
 
     if (!user) {
       res.status(404).json({ error: "User not found" });
@@ -115,7 +135,28 @@ export const me = async (req: Request, res: Response): Promise<void> => {
       created_at: user.created_at
     });
   } catch (err) {
-    console.error(err);
+    console.error("Get user error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// ===== LOGOUT (OPTIONAL) =====
+
+/**
+ * Logout user
+ * In JWT-based auth, logout is handled client-side by deleting tokens
+ * This endpoint can be used for server-side token blacklisting if needed
+ */
+export const logout = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    // In stateless JWT auth, logout is client-side
+    // This endpoint exists for API consistency
+    res.json({ message: "Logged out successfully" });
+  } catch (err) {
+    console.error("Logout error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 };

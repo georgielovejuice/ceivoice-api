@@ -1,237 +1,208 @@
-# CeiVoice Backend API
+# CeiVoice API
 
-A TypeScript-based Express.js REST API for managing support tickets and user requests with role-based access control.
+> A production-ready ticket management system with complete authentication, built with Express.js & Passport.js
 
-## Project Structure
+## Project Overview
 
-```
-backend-expressjs/
-├── src/
-│   ├── app.ts                 # Express app setup
-│   ├── server.ts              # Entry point
-│   ├── constants/             # Constants and enums
-│   ├── controllers/           # Request handlers (*.controller.ts)
-│   ├── middlewares/           # Express middleware (*.middleware.ts)
-│   ├── routes/                # Route definitions (*.route.ts)
-│   └── services/              # Business logic (*.service.ts)
-├── prisma/
-│   ├── schema.prisma          # Database schema
-│   └── migrations/            # Database migrations
-├── tsconfig.json              # TypeScript configuration
-├── package.json               # Dependencies
-└── .env.example               # Environment variables template
-```
+| Component | Status | Version |
+|-----------|--------|---------|
+| Backend API | ✅ Production Ready | 2.0.0 |
+| Authentication | ✅ Passport.js + JWT | Feb 2026 |
+| Database | ✅ PostgreSQL + Prisma | 6.x |
+| Documentation | ✅ Complete | 4 files |
 
-## Tech Stack
-
-- **Runtime**: Node.js 20+
-- **Language**: TypeScript 5.9
-- **Framework**: Express.js 5.2
-- **Database**: PostgreSQL with Prisma ORM
-- **Authentication**: JWT + Google OAuth2
-- **Development**: ts-node + nodemon
-
-## Quick Start
-
-### Prerequisites
-- Node.js 20+
-- PostgreSQL (or SQLite for development)
-- pnpm or npm
-
-### Installation
+## Get Started in 2 Minutes
 
 ```bash
-cd backend-expressjs
-pnpm install    # or npm install
-```
-
-### Environment Setup
-
-```bash
+cd backend
+npm install
 cp .env.example .env
+npm run prisma:migrate
+npm run dev
 ```
 
-Edit `.env` with your configuration:
-```
-DATABASE_URL="postgresql://user:password@localhost:5432/ceivoice_db"
-JWT_SECRET="your-secret-key-change-in-production"
-GOOGLE_CLIENT_ID="your-google-oauth-client-id"
-PORT=5000
-AUTH_MODE=DEV
-DEV_ROLE=ADMIN
-```
+Server runs on http://localhost:5000
 
-### Database Setup
+## Documentation
 
+| Document | Purpose | Read Time |
+|----------|---------|-----------|
+| **[backend/README.md](backend/README.md)** | API overview & features | 5 min |
+| **[backend/QUICK_REFERENCE.md](backend/QUICK_REFERENCE.md)** | Auth quick lookup | 5 min |
+| **[backend/AUTH_IMPLEMENTATION.md](backend/AUTH_IMPLEMENTATION.md)** | Detailed auth guide | 15 min |
+| **[backend/CHANGELOG.md](backend/CHANGELOG.md)** | What's changed | 5 min |
+| **[CHECKPOINT.md](CHECKPOINT.md)** | Project status & next steps | 10 min |
+
+## What You Can Do
+
+### For Users
+- **Register** with email/password or Google
+- **Login** to access personalized features
+- **Submit requests** that auto-create support tickets
+- **Track requests** with unique tracking IDs
+- **Follow tickets** to get status updates
+
+### For Support Team
+- **Manage tickets** through complete lifecycle
+- **Assign tickets** to team members
+- **Add comments** (public & internal)
+- **Set deadlines** and track progress
+- **View statistics** and performance metrics
+
+### For Admins
+- **Approve drafts** before tickets go live
+- **Manage assignees** and their scope
+- **View analytics** on ticket metrics
+- **Configure system** and manage users
+
+## Authentication
+
+### Two Authentication Methods
+
+**Email/Password**
 ```bash
-npx prisma migrate dev --name init
-npx prisma studio  # View database in GUI
+POST /api/auth/register
+POST /api/auth/login
 ```
 
-### Development
-
+**Google OAuth**
 ```bash
-npm run dev          # Starts with ts-node + nodemon hot reload
+GET /api/auth/google
+GET /api/auth/google/callback
 ```
 
-### Production Build
-
+### Token Management
 ```bash
-npm run build        # Compile TypeScript to JavaScript
-npm start            # Run compiled server
+POST /api/auth/refresh        # Get new access token
+GET  /api/auth/me             # Get user profile
 ```
 
-## API Endpoints
+All protected routes use Bearer token authentication:
+```
+Authorization: Bearer <your_access_token>
+```
 
-### Authentication
-- `POST /api/auth/google` - OAuth2 login
-- `GET /api/auth/me` - Get current user (requires auth)
+## Architecture
 
-### Requests
-- `POST /api/requests` - Submit support request
+```
+CeiVoice API Backend
+├── Passport.js Strategies
+│   ├── JWT (Bearer Token)
+│   ├── Local (Email/Password)
+│   └── Google OAuth 2.0
+├── Services Layer
+│   ├── Authentication & Tokens
+│   ├── Database Operations
+│   ├── Email Notifications
+│   └── AI Utilities
+├── API Routes
+│   ├── /api/auth        (7 endpoints)
+│   ├── /api/requests    (4 endpoints)
+│   ├── /api/tickets     (8+ endpoints)
+│   └── /api/admin       (5+ endpoints)
+└── PostgreSQL Database
+    └── 12 Interconnected Tables
+```
 
-### Tickets
-- `POST /api/tickets/:id/status` - Update ticket status (requires auth)
-- `PATCH /api/tickets/:id/status` - Alternative update method
+## Key Technologies
 
-### Admin (requires ADMIN role)
-- `GET /api/admin/tickets/drafts` - List draft tickets
-- `PATCH /api/admin/tickets/:id/draft` - Edit draft ticket
-- `POST /api/admin/tickets/:id/approve` - Approve draft to NEW status
-- `GET /api/admin/tickets` - List active tickets
+| Purpose | Technology |
+|---------|-----------|
+| Web Framework | Express.js 5.x |
+| Language | TypeScript 5.x |
+| Database | PostgreSQL + Prisma ORM |
+| Authentication | Passport.js + JWT + bcryptjs |
+| Email | Nodemailer |
+| Development | ts-node, nodemon |
 
-### Health Check
-- `GET /health` - Server health status
+## Full Documentation
 
-## Features
+Detailed information is in the backend folder:
+- See [backend/README.md](backend/README.md) for API documentation
+- See [backend/QUICK_REFERENCE.md](backend/QUICK_REFERENCE.md) for auth quick reference
+- See [CHECKPOINT.md](CHECKPOINT.md) for project status
 
-✅ **Type Safety** - Full TypeScript with strict mode
-✅ **Authentication** - JWT + Google OAuth2 integration
-✅ **Authorization** - Role-based access control (USER/ADMIN)
-✅ **Database** - Prisma ORM with PostgreSQL
-✅ **Hot Reload** - Development with nodemon + ts-node
-✅ **API Structure** - Controllers, Services, Routes, Middleware pattern
-✅ **Validation** - Request type checking via Prisma
-✅ **Error Handling** - Try-catch with proper error responses
+## API Workflow Example
 
-## Development
+```
+1. User registers
+   POST /api/auth/register → Get accessToken + refreshToken
 
-### Get JWT Token (DEV Mode)
+2. User makes request  
+   GET /api/auth/me (with Bearer token) → Returns user profile
 
-1. Set `AUTH_MODE=DEV` and `DEV_ROLE=ADMIN` in `.env`
-2. Restart server: `npm run dev`
-3. POST to `/api/auth/google` with any `id_token`
-4. Copy returned token and use in Authorization header
+3. Access token expires (7 days)
+   POST /api/auth/refresh (with refreshToken) → Get new accessToken
 
-### TypeScript Compilation
+4. Submit support request
+   POST /api/requests → Auto-creates draft ticket
 
+5. Admin approves draft
+   POST /api/admin/drafts/:id/approve → Ticket goes live
+```
+
+## Development Workflow
+
+### Starting Fresh
 ```bash
-npx tsc --noEmit     # Check for errors without building
-npm run build        # Build to dist/
+cd backend
+npm install
+cp .env.example .env           # Configure your .env
+npm run prisma:migrate         # Setup database
+npm run dev                    # Start development server
 ```
 
-### Database Operations
-
+### Common Commands
 ```bash
-npx prisma migrate dev       # Create and run migration
-npx prisma studio           # Open database GUI
-npx prisma generate         # Regenerate Prisma client
+npm run dev              # Start with hot reload
+npm run build            # Build for production
+npm run prisma:studio    # View/edit database
+npm run prisma:migrate   # Run migrations
 ```
 
-## Naming Conventions
+### Making Changes
+1. Update routes in `src/routes/*.ts`
+2. Add handlers in `src/controllers/*.ts`
+3. Implement logic in `src/services/*.ts`
+4. Add middleware in `src/middlewares/*.ts` if needed
+5. Update database schema in `prisma/schema.prisma` if needed
 
-- **Controllers**: `*.controller.ts` - Handle HTTP requests/responses
-- **Services**: `*.service.ts` - Business logic and database queries
-- **Routes**: `*.route.ts` - Define endpoints and middleware
-- **Middleware**: `*.middleware.ts` - Authentication, logging, etc.
-- **Constants**: `*.ts` - Enums and constants
+## Environment Variables
 
-## File Structure Rules
-
-```
-src/
-├── controllers/auth.controller.ts      (HTTP handlers)
-├── services/auth.service.ts            (Database & logic)
-├── routes/auth.route.ts                (Express Router)
-└── middlewares/auth.middleware.ts      (Express middleware)
+**Minimum required:**
+```env
+DATABASE_URL=postgresql://user:pass@localhost/ceivoice
+JWT_SECRET=your-secret-key-min-32-chars
+GOOGLE_CLIENT_ID=your-google-id
 ```
 
-## Database Models
+**All variables:** See `backend/.env.example`
 
-- **User** - User accounts with roles (ADMIN/USER)
-- **Request** - Customer support requests
-- **Ticket** - Support tickets with status tracking
-- **Category** - Ticket categories
-- **Comment** - Internal/external ticket comments
-- **StatusHistory** - Audit log for status changes
-- **TicketRequest** - Link requests to tickets
-- **AssignmentHistory** - Track ticket assignments
+## Project Statistics
 
-## Status Transitions
+- **API Endpoints**: 25+
+- **Database Tables**: 12
+- **Authentication Methods**: 3 (Email, Google, JWT)
+- **Services**: 4
+- **Controllers**: 4
+- **Middleware**: 5+
 
-```
-DRAFT → NEW → SOLVING → SOLVED
-             ↓
-            FAILED
-```
+## 📞 Need Help?
 
-- **USER**: Can only create requests (DRAFT → NEW)
-- **ADMIN**: Can change status (NEW → SOLVING → SOLVED/FAILED)
+1. **Quick answers?** → `backend/QUICK_REFERENCE.md`
+2. **Auth details?** → `backend/AUTH_IMPLEMENTATION.md`
+3. **API reference?** → `backend/README.md`
+4. **Project status?** → `CHECKPOINT.md`
 
-## Error Handling
+### Latest Changes
+- Integrated Passport.js for production authentication
+- Added JWT Bearer token strategy
+- Google OAuth 2.0 implementation
+- Complete token refresh mechanism
+- Comprehensive documentation
 
-All errors return appropriate HTTP status codes:
-- `400` - Bad Request (validation errors)
-- `401` - Unauthorized (missing/invalid token)
-- `403` - Forbidden (insufficient permissions)
-- `404` - Not Found (resource doesn't exist)
-- `500` - Internal Server Error
+For full history, see [backend/CHANGELOG.md](backend/CHANGELOG.md)
 
-## Testing with Postman
+---
 
-See [TYPESCRIPT_MIGRATION.md](./TYPESCRIPT_MIGRATION.md) for complete API testing guide.
-
-## Contributing
-
-1. Create a feature branch from `main`
-2. Make changes following the naming conventions
-3. Run type checking: `npx tsc --noEmit`
-4. Build and test locally: `npm run build && npm start`
-5. Commit with descriptive messages
-
-## Scripts
-
-| Script | Description |
-|--------|-------------|
-| `npm run dev` | Development server with hot reload |
-| `npm run build` | Compile TypeScript to JavaScript |
-| `npm start` | Production server (requires build) |
-| `npm run start:prod` | Build and run production |
-
-## Troubleshooting
-
-### Database Connection Error
-- Ensure PostgreSQL is running
-- Check `DATABASE_URL` in `.env`
-- Run migrations: `npx prisma migrate dev`
-
-### TypeScript Errors
-- Run `npx tsc --noEmit` to check all errors
-- Ensure all imports use `.ts` file extensions
-- Check that types are properly imported
-
-### Port Already in Use
-```bash
-kill -9 $(lsof -i :5000)
-```
-
-## License
-
-ISC
-
-## Resources
-
-- [Express.js Documentation](https://expressjs.com/)
-- [TypeScript Handbook](https://www.typescriptlang.org/docs/)
-- [Prisma Documentation](https://www.prisma.io/docs/)
-- [JWT Introduction](https://jwt.io/introduction)
+**Start exploring**: `cd backend && npm install && npm run dev`
