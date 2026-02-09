@@ -1,3 +1,4 @@
+````markdown
 # CeiVoice API Backend
 
 A production-ready TypeScript Express.js API with Passport.js JWT authentication, PostgreSQL database, and comprehensive ticket management system.
@@ -198,7 +199,7 @@ router.get("/protected", authenticate, controller.handler);
 router.delete("/admin", authenticate, authorize(["ADMIN"]), controller.handler);
 ```
 
-For detailed auth documentation, see `QUICK_REFERENCE.md`
+For detailed auth documentation, see [QUICK_REFERENCE.md](../QUICK_REFERENCE.md)
 
 ## ⚙️ Configuration
 
@@ -255,12 +256,14 @@ See `.env.example` for all options.
 ## 📞 Support
 
 See the detailed documentation:
-- **QUICK_REFERENCE.md** - Auth quick reference & examples
-- **AUTH_IMPLEMENTATION.md** - Comprehensive auth guide
+- [QUICK_REFERENCE.md](../QUICK_REFERENCE.md) - Auth quick reference & examples
+- [AUTH_TESTING_GUIDE.md](../testing/AUTH_TESTING_GUIDE.md) - Comprehensive testing guide
 - Prisma documentation: https://www.prisma.io/docs/
 
 ---
 
-**Last Updated**: February 10, 2026  
-**Version**: 2.0.0 (Passport.js Integration Complete)  
-**Status**: ✅ Production Ready
+**Last Updated**: February 10, 2026
+**Version**: 2.0.0 (Passport.js Integration Complete)
+**Status**: Production Ready
+
+````

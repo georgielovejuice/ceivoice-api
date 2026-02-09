@@ -46,7 +46,7 @@ Server runs on `http://localhost:5000`
 | GET | /api/tickets | List tickets |
 | POST | /api/admin/drafts/:id/approve | Approve ticket |
 
-See [backend/QUICK_REFERENCE.md](backend/QUICK_REFERENCE.md) for full endpoint list.
+See [docs/QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md) for full endpoint list.
 
 ## Configuration
 
@@ -90,11 +90,11 @@ backend/
 
 ## Documentation
 
-- [backend/README.md](backend/README.md) - API overview
-- [backend/QUICK_REFERENCE.md](backend/QUICK_REFERENCE.md) - API reference
-- [backend/AUTH_TESTING_GUIDE.md](backend/AUTH_TESTING_GUIDE.md) - Testing guide
-- [backend/STATUS.md](backend/STATUS.md) - Project status
-- [backend/CHANGELOG.md](backend/CHANGELOG.md) - Version history
+- [docs/api/README.md](docs/api/README.md) - API overview
+- [docs/QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md) - API reference
+- [docs/testing/AUTH_TESTING_GUIDE.md](docs/testing/AUTH_TESTING_GUIDE.md) - Testing guide
+- [docs/STATUS.md](docs/STATUS.md) - Project status
+- [docs/CHANGELOG.md](docs/CHANGELOG.md) - Version history
 
 ## Testing
 
@@ -109,6 +109,3 @@ bash backend/test-auth-flows.sh
 cat backend/AUTH_TESTING_GUIDE.md
 ```
 
-## License
-
-Private

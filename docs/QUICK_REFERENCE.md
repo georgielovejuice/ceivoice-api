@@ -1,3 +1,4 @@
+````markdown
 # Passport.js Authentication - Quick Reference
 
 ## Files Created/Modified
@@ -5,8 +6,8 @@
 ### Created Files
 - ✅ `src/config/environment.ts` - Configuration management
 - ✅ `src/config/passport.ts` - Passport strategies
-- ✅ `AUTH_IMPLEMENTATION.md` - Full documentation
-- ✅ `PASSPORT_INTEGRATION_SUMMARY.md` - Implementation summary
+- ✅ `docs/QUICK_REFERENCE.md` - Full documentation
+- ✅ `docs/api/README.md` - Implementation summary
 
 ### Modified Files
 - ✅ `src/app.ts` - Passport initialization
@@ -214,4 +215,6 @@ curl -X POST http://localhost:5000/api/auth/refresh \
 
 ---
 
-For detailed information, see `AUTH_IMPLEMENTATION.md`
+For detailed information, see [api/README.md](api/README.md)
+
+````

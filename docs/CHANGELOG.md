@@ -1,3 +1,4 @@
+```markdown
 # Changelog
 
 All notable changes to this project are documented here.
@@ -31,10 +32,11 @@ All notable changes to this project are documented here.
 - Backward compatible with existing endpoints
 
 #### Documentation
-- Created `README.md` - Concise project overview (clean format)
-- Created `QUICK_REFERENCE.md` - Auth quick reference guide
-- Created `AUTH_IMPLEMENTATION.md` - Detailed authentication guide
-- Consolidated documentation (removed 5 redundant files)
+- Created `docs/` structure with organized documentation
+- Created `docs/api/README.md` - Concise project overview (clean format)
+- Created `docs/QUICK_REFERENCE.md` - Auth quick reference guide
+- Created `docs/testing/` - Testing documentation
+- Consolidated documentation (removed redundant files)
 
 ### Security Enhancements
 - Production-grade token validation with issuer/audience claims
@@ -50,19 +52,20 @@ All notable changes to this project are documented here.
 - Database schema unchanged
 - No migrations required for existing data
 
-### Documentation Cleanup
+### Documentation Restructure
+**Organized into docs/ folder:**
+- `docs/api/README.md` - Main API reference
+- `docs/QUICK_REFERENCE.md` - Auth quick lookup
+- `docs/testing/` - Testing guides and scripts
+- `docs/CHANGELOG.md` - This file
+- `docs/STATUS.md` - Project status
+
 **Removed redundant files:**
-- FINAL_SUMMARY.md
-- FILE_MANIFEST.md
-- IMPLEMENTATION_SUMMARY.md
-- NEXT_STEPS.md
-- PASSPORT_INTEGRATION_SUMMARY.md
+- Old root-level .md files moved to organized structure
 
 **Kept essential documentation:**
-- README.md (project overview & quick start)
-- QUICK_REFERENCE.md (auth quick lookup)
-- AUTH_IMPLEMENTATION.md (detailed auth guide)
-- CHANGELOG.md (this file)
+- Root README.md (project overview)
+- Docs folder structure for GitHub visibility
 
 ## [1.0.0] - Previous Release
 
@@ -79,11 +82,12 @@ All notable changes to this project are documented here.
 
 ## Getting Started with Latest Version
 
-See [README.md](README.md) for quick start guide.
+See [Root README.md](../../README.md) for quick start guide.
 
 For authentication details, see:
+- [api/README.md](api/README.md) - Complete API reference
 - [QUICK_REFERENCE.md](QUICK_REFERENCE.md) - Quick lookup
-- [AUTH_IMPLEMENTATION.md](AUTH_IMPLEMENTATION.md) - Detailed guide
+- [testing/](testing/) - Testing guides
 
 ## Next Steps
 
@@ -109,5 +113,7 @@ For authentication details, see:
 
 ## Version History
 
-- **v2.0.0** - Passport.js integration (Feb 10, 2026)
+- **v2.0.0** - Passport.js integration with docs reorganization (Feb 10, 2026)
 - **v1.0.0** - Initial release (Dec 2025)
+
+```
