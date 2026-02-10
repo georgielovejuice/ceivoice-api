@@ -1,40 +1,68 @@
-import nodemailer from "nodemailer";
+import React from "react";
+import { Resend } from "resend";
+import { render } from "@react-email/render";
+import { ConfirmationEmail } from "../templates/ConfirmationEmail";
+import { StatusChangeEmail } from "../templates/StatusChangeEmail";
+import { CommentNotificationEmail } from "../templates/CommentNotificationEmail";
+import { AssignmentNotificationEmail } from "../templates/AssignmentNotificationEmail";
+import { queueService, EmailQueuePayload } from "./queue.service";
 
-const transporter = nodemailer.createTransport({
-  service: process.env.EMAIL_SERVICE || "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
+const FROM_EMAIL = process.env.FROM_EMAIL || "noreply@ceivoice.com";
+
+/**
+ * Queue email for processing via RabbitMQ
+ */
+const queueEmail = async (payload: EmailQueuePayload): Promise<boolean> => {
+  const isQueued = await queueService.publishEmail(payload);
+  if (!isQueued) {
+    console.warn(`Failed to queue email for ${payload.email}`);
   }
-});
+  return isQueued;
+};
 
+/**
+ * Send confirmation email for new requests
+ */
 export const sendConfirmationEmail = async (
   email: string,
   trackingId: string,
-  ticketId: number
+  ticketId: number,
+  useQueue: boolean = true
 ): Promise<boolean> => {
   try {
-    const trackingLink = `${process.env.FRONTEND_URL}/track/${trackingId}`;
+    if (useQueue) {
+      return await queueEmail({
+        type: "confirmation",
+        email,
+        data: { trackingId, ticketId },
+      });
+    }
 
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
+    const htmlContent = await render(
+      React.createElement(ConfirmationEmail, {
+        email,
+        trackingId,
+        ticketId,
+        frontendUrl: FRONTEND_URL,
+      })
+    );
+
+    const response = await resend.emails.send({
+      from: FROM_EMAIL,
       to: email,
-      subject: "Request Confirmation - Ticket Tracking",
-      html: `
-        <h2>Thank you for submitting your request!</h2>
-        <p>Your request has been received and is being processed.</p>
-        <p><strong>Tracking ID:</strong> ${trackingId}</p>
-        <p><strong>Ticket ID:</strong> #${ticketId}</p>
-        <p>
-          <a href="${trackingLink}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
-            Track Your Request
-          </a>
-        </p>
-        <p>You can use this link to check the status of your request anytime.</p>
-      `
-    };
+      subject: `Request Confirmation - Ticket Tracking #${ticketId}`,
+      html: htmlContent,
+    });
 
-    await transporter.sendMail(mailOptions);
+    if (response.error) {
+      console.error("Error sending confirmation email via Resend:", response.error);
+      return false;
+    }
+
+    console.log(`✓ Confirmation email sent to ${email}`, response.data);
     return true;
   } catch (error) {
     console.error("Error sending confirmation email:", error);
@@ -42,32 +70,47 @@ export const sendConfirmationEmail = async (
   }
 };
 
+/**
+ * Send status change notification email
+ */
 export const sendStatusChangeEmail = async (
   email: string,
   ticketId: number,
   newStatus: string,
-  trackingId: string
+  trackingId: string,
+  useQueue: boolean = true
 ): Promise<boolean> => {
   try {
-    const trackingLink = `${process.env.FRONTEND_URL}/track/${trackingId}`;
+    if (useQueue) {
+      return await queueEmail({
+        type: "status_change",
+        email,
+        data: { ticketId, newStatus, trackingId },
+      });
+    }
 
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
+    const htmlContent = await render(
+      React.createElement(StatusChangeEmail, {
+        ticketId,
+        newStatus,
+        trackingId,
+        frontendUrl: FRONTEND_URL,
+      })
+    );
+
+    const response = await resend.emails.send({
+      from: FROM_EMAIL,
       to: email,
       subject: `Ticket #${ticketId} Status Updated to ${newStatus}`,
-      html: `
-        <h2>Your Request Status Has Been Updated</h2>
-        <p><strong>Ticket ID:</strong> #${ticketId}</p>
-        <p><strong>New Status:</strong> ${newStatus}</p>
-        <p>
-          <a href="${trackingLink}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
-            View Details
-          </a>
-        </p>
-      `
-    };
+      html: htmlContent,
+    });
 
-    await transporter.sendMail(mailOptions);
+    if (response.error) {
+      console.error("Error sending status change email via Resend:", response.error);
+      return false;
+    }
+
+    console.log(`✓ Status change email sent to ${email}`, response.data);
     return true;
   } catch (error) {
     console.error("Error sending status change email:", error);
@@ -75,32 +118,47 @@ export const sendStatusChangeEmail = async (
   }
 };
 
+/**
+ * Send comment notification email
+ */
 export const sendCommentNotificationEmail = async (
   email: string,
   ticketId: number,
   commenterName: string,
-  trackingId: string
+  trackingId: string,
+  useQueue: boolean = true
 ): Promise<boolean> => {
   try {
-    const trackingLink = `${process.env.FRONTEND_URL}/track/${trackingId}`;
+    if (useQueue) {
+      return await queueEmail({
+        type: "comment_notification",
+        email,
+        data: { ticketId, commenterName, trackingId },
+      });
+    }
 
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
+    const htmlContent = await render(
+      React.createElement(CommentNotificationEmail, {
+        ticketId,
+        commenterName,
+        trackingId,
+        frontendUrl: FRONTEND_URL,
+      })
+    );
+
+    const response = await resend.emails.send({
+      from: FROM_EMAIL,
       to: email,
       subject: `New Comment on Ticket #${ticketId} from ${commenterName}`,
-      html: `
-        <h2>New Comment on Your Request</h2>
-        <p><strong>Ticket ID:</strong> #${ticketId}</p>
-        <p><strong>Comment From:</strong> ${commenterName}</p>
-        <p>
-          <a href="${trackingLink}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
-            View Comment
-          </a>
-        </p>
-      `
-    };
+      html: htmlContent,
+    });
 
-    await transporter.sendMail(mailOptions);
+    if (response.error) {
+      console.error("Error sending comment notification email via Resend:", response.error);
+      return false;
+    }
+
+    console.log(`✓ Comment notification email sent to ${email}`, response.data);
     return true;
   } catch (error) {
     console.error("Error sending comment notification email:", error);
@@ -108,30 +166,111 @@ export const sendCommentNotificationEmail = async (
   }
 };
 
+/**
+ * Send ticket assignment notification email
+ */
 export const sendAssignmentNotificationEmail = async (
   email: string,
   ticketId: number,
   ticketTitle: string,
-  assigneeName: string
+  assigneeName: string,
+  useQueue: boolean = true
 ): Promise<boolean> => {
   try {
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
+    if (useQueue) {
+      return await queueEmail({
+        type: "assignment_notification",
+        email,
+        data: { ticketId, ticketTitle, assigneeName },
+      });
+    }
+
+    const htmlContent = await render(
+      React.createElement(AssignmentNotificationEmail, {
+        ticketId,
+        ticketTitle,
+        assigneeName,
+      })
+    );
+
+    const response = await resend.emails.send({
+      from: FROM_EMAIL,
       to: email,
       subject: `You have been assigned to Ticket #${ticketId}`,
-      html: `
-        <h2>New Ticket Assignment</h2>
-        <p><strong>Ticket ID:</strong> #${ticketId}</p>
-        <p><strong>Title:</strong> ${ticketTitle}</p>
-        <p><strong>Assigned by:</strong> ${assigneeName}</p>
-        <p>Please log in to the system to view the ticket details and start working on it.</p>
-      `
-    };
+      html: htmlContent,
+    });
 
-    await transporter.sendMail(mailOptions);
+    if (response.error) {
+      console.error("Error sending assignment notification email via Resend:", response.error);
+      return false;
+    }
+
+    console.log(`✓ Assignment notification email sent to ${email}`, response.data);
     return true;
   } catch (error) {
     console.error("Error sending assignment notification email:", error);
     return false;
+  }
+};
+
+/**
+ * Process queued emails (for worker/consumer)
+ */
+export const processQueuedEmails = async (): Promise<void> => {
+  try {
+    await queueService.connect();
+
+    await queueService.consumeEmails(async (payload: EmailQueuePayload) => {
+      const { type, email, data } = payload;
+
+      console.log(`Processing ${type} email for ${email}`);
+
+      switch (type) {
+        case "confirmation":
+          await sendConfirmationEmail(
+            email,
+            data.trackingId,
+            data.ticketId,
+            false
+          );
+          break;
+
+        case "status_change":
+          await sendStatusChangeEmail(
+            email,
+            data.ticketId,
+            data.newStatus,
+            data.trackingId,
+            false
+          );
+          break;
+
+        case "comment_notification":
+          await sendCommentNotificationEmail(
+            email,
+            data.ticketId,
+            data.commenterName,
+            data.trackingId,
+            false
+          );
+          break;
+
+        case "assignment_notification":
+          await sendAssignmentNotificationEmail(
+            email,
+            data.ticketId,
+            data.ticketTitle,
+            data.assigneeName,
+            false
+          );
+          break;
+
+        default:
+          console.warn(`Unknown email type: ${type}`);
+      }
+    });
+  } catch (error) {
+    console.error("Error processing queued emails:", error);
+    throw error;
   }
 };

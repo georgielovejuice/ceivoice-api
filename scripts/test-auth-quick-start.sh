@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Quick Start - Auth Testing
-# Run this file to execute all authentication tests
+# Run this script to get started with authentication testing
 
 set -e
 
@@ -15,9 +15,9 @@ echo "────────────────────────�
 echo "Run in a separate terminal:"
 echo ""
 echo "  cd backend"
-echo "  npm install"
+echo "  pnpm install"
 echo "  cp .env.example .env"
-echo "  npm run dev"
+echo "  pnpm run dev"
 echo ""
 echo "Wait for: 'Server listening on port 5000'"
 echo ""
@@ -67,7 +67,7 @@ echo "Step 5: View All Test Instructions"
 echo "────────────────────────────────────────────────────────────"
 echo "Open the detailed guide:"
 echo ""
-echo "  cat backend/AUTH_TESTING_GUIDE.md"
+echo "  cat docs/testing/AUTH_TESTING_GUIDE.md"
 echo ""
 echo "This file contains:"
 echo "  - All test commands with explanations"
@@ -77,7 +77,7 @@ echo "  - JWT claim verification"
 echo "  - Google OAuth testing"
 echo ""
 
-echo "✓ Testing Setup Complete"
+echo "Testing Setup Complete"
 echo ""
 echo "Next: Follow the commands above to test each flow"
-echo "Detailed instructions: backend/AUTH_TESTING_GUIDE.md"
+echo "Detailed instructions: docs/testing/AUTH_TESTING_GUIDE.md"
