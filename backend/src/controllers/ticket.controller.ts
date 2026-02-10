@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import * as dbService from "../services/db.service";
 import * as emailService from "../services/email.service";
-import * as aiService from "../services/ai.service";
 
 // ===== DRAFT TICKETS =====
 
@@ -25,7 +24,7 @@ export const editDraftTicket = async (
   try {
     const { id } = req.params;
     const { title, summary, category_id, suggested_solution } = req.body;
-    const ticketId = parseInt(id);
+    const ticketId = Number.parseInt(id);
 
     // Get current ticket
     const ticket = await dbService.getTicketById(ticketId);
@@ -78,7 +77,7 @@ export const setDeadline = async (
   try {
     const { id } = req.params;
     const { deadline } = req.body;
-    const ticketId = parseInt(id);
+    const ticketId = Number.parseInt(id);
 
     if (!deadline) {
       res.status(400).json({ error: "Deadline is required" });
@@ -86,7 +85,7 @@ export const setDeadline = async (
     }
 
     const deadlineDate = new Date(deadline);
-    if (isNaN(deadlineDate.getTime())) {
+    if (Number.isNaN(deadlineDate.getTime())) {
       res.status(400).json({ error: "Invalid deadline format" });
       return;
     }
@@ -117,7 +116,7 @@ export const updateStatus = async (
       return;
     }
 
-    const ticketId = parseInt(req.params.id, 10);
+    const ticketId = Number.parseInt(req.params.id, 10);
     const { new_status } = req.body;
 
     if (!new_status) {
@@ -172,7 +171,7 @@ export const getTicketById = async (
   res: Response
 ): Promise<void> => {
   try {
-    const ticketId = parseInt(req.params.id, 10);
+    const ticketId = Number.parseInt(req.params.id, 10);
     const ticket = await dbService.getTicketById(ticketId);
 
     if (!ticket) {
@@ -219,7 +218,7 @@ export const assignTicket = async (
       return;
     }
 
-    const ticketId = parseInt(req.params.id, 10);
+    const ticketId = Number.parseInt(req.params.id, 10);
     const { assignee_id } = req.body;
 
     if (!assignee_id) {
@@ -252,7 +251,7 @@ export const unassignTicket = async (
   res: Response
 ): Promise<void> => {
   try {
-    const ticketId = parseInt(req.params.id, 10);
+    const ticketId = Number.parseInt(req.params.id, 10);
     const { assignee_id } = req.body;
 
     if (!assignee_id) {
@@ -280,7 +279,7 @@ export const addComment = async (
       return;
     }
 
-    const ticketId = parseInt(req.params.id, 10);
+    const ticketId = Number.parseInt(req.params.id, 10);
     const { content, is_internal } = req.body;
 
     if (!content) {
@@ -310,7 +309,7 @@ export const getComments = async (
   res: Response
 ): Promise<void> => {
   try {
-    const ticketId = parseInt(req.params.id, 10);
+    const ticketId = Number.parseInt(req.params.id, 10);
     const isPublic = req.query.public === "true";
 
     let comments;
@@ -339,7 +338,7 @@ export const addFollower = async (
       return;
     }
 
-    const ticketId = parseInt(req.params.id, 10);
+    const ticketId = Number.parseInt(req.params.id, 10);
     await dbService.addFollower(ticketId, req.user.user_id);
 
     res.json({ message: "Follower added successfully" });
@@ -354,7 +353,7 @@ export const getFollowers = async (
   res: Response
 ): Promise<void> => {
   try {
-    const ticketId = parseInt(req.params.id, 10);
+    const ticketId = Number.parseInt(req.params.id, 10);
     const followers = await dbService.getFollowers(ticketId);
     res.json(followers);
   } catch (err) {

@@ -2,15 +2,15 @@
   "name": "ceivoice-api-backend",
   "version": "1.0.0",
   "description": "CeiVoice API Backend - Merged TypeScript Express.js Application",
-  "main": "dist/server.js",
+  "main": "dist/server.ts",
   "scripts": {
-    "dev": "npx nodemon --exec ts-node src/server.ts",
+    "dev": "pnpm exec nodemon --exec ts-node src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js",
-    "start:prod": "npm run build && npm start",
-    "prisma:migrate": "prisma migrate dev",
-    "prisma:generate": "prisma generate",
-    "prisma:studio": "prisma studio"
+    "start": "node dist/server.ts",
+    "start:prod": "pnpm run build && pnpm start",
+    "prisma:migrate": "pnpm exec prisma migrate dev",
+    "prisma:generate": "pnpm exec prisma generate",
+    "prisma:studio": "pnpm exec prisma studio"
   },
   "repository": {
     "type": "git",

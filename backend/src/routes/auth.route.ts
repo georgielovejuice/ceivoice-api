@@ -6,7 +6,9 @@
 import { Router } from "express";
 import passport from "passport";
 import * as authController from "../controllers/auth.controller";
-import { authenticate, authenticateOptional } from "../middlewares/auth.middleware";
+import * as authService from "../services/auth.service";
+import { authenticate } from "../middlewares/auth.middleware";
+import config from "../config/environment";
 
 const router = Router();
 
@@ -62,12 +64,25 @@ router.get(
   }),
   (req, res) => {
     // On success, user is in req.user
-    // Generate tokens and redirect to frontend with query params
     if (req.user) {
       const user = req.user as any;
+
+      // Generate tokens
+      const payload = {
+        user_id: user.user_id,
+        email: user.email,
+        role: user.role
+      };
+
+      const accessToken = authService.generateAccessToken(payload);
+      const refreshToken = authService.generateRefreshToken(payload);
+
+      // Redirect to frontend with tokens
       res.redirect(
-        `/auth-success?user_id=${user.user_id}&email=${user.email}&name=${user.name}`
+        `${config.api.frontendUrl}/auth-success?accessToken=${accessToken}&refreshToken=${refreshToken}`
       );
+    } else {
+      res.redirect(`${config.api.frontendUrl}/login?error=auth_failed`);
     }
   }
 );

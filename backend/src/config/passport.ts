@@ -35,6 +35,12 @@ export interface UserProfile {
   role: string;
 }
 
+declare global {
+  namespace Express {
+    interface User extends UserProfile {}
+  }
+}
+
 // ===== JWT STRATEGY =====
 /**
  * Validates JWT tokens from Authorization header
