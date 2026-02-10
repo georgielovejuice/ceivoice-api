@@ -83,6 +83,29 @@ export const getTicketsByAssignee = async (assigneeId: number) => {
   });
 };
 
+export const getAllTickets = async () => {
+  return await prisma.ticket.findMany({
+    include: {
+      category: true,
+      assignments: {
+        include: {
+          assignee: {
+            select: {
+              user_id: true,
+              name: true,
+              email: true
+            }
+          }
+        },
+        where: {
+          is_active: true
+        }
+      }
+    },
+    orderBy: { created_at: "desc" }
+  });
+};
+
 // ===== CATEGORY SERVICE =====
 
 export const getOrCreateCategory = async (categoryName: string) => {

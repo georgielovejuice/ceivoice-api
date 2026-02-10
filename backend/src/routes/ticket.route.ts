@@ -7,6 +7,9 @@ const router = Router();
 // Protected routes - Authenticated users only
 router.use(authenticate);
 
+// Get all tickets - All authenticated users
+router.get("/", ticketController.getAllTickets);
+
 // Get specific ticket
 router.get("/:id", ticketController.getTicketById);
 
@@ -14,9 +17,7 @@ router.get("/:id", ticketController.getTicketById);
 router.get("/status/:status", ticketController.getTicketsByStatus);
 
 // Draft tickets management - Admin only
-router.get("/", authorize(["ADMIN"]), async (req, res) => {
-  return ticketController.getDraftTickets(req, res);
-});
+router.get("/drafts", authorize(["ADMIN"]), ticketController.getDraftTickets);
 router.put("/:id", authorize(["ADMIN"]), ticketController.editDraftTicket);
 router.put("/:id/deadline", authorize(["ADMIN"]), ticketController.setDeadline);
 

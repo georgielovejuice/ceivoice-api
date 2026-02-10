@@ -4,6 +4,19 @@ import * as emailService from "../services/email.service";
 
 // ===== DRAFT TICKETS =====
 
+export const getAllTickets = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const tickets = await dbService.getAllTickets();
+    res.json(tickets);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 export const getDraftTickets = async (
   req: Request,
   res: Response
