@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import type { UserProfile } from "../config/passport";
 import * as dbService from "../services/db.service";
 import * as emailService from "../services/email.service";
 
@@ -9,7 +10,7 @@ export const listDrafts = async (
   res: Response
 ): Promise<void> => {
   try {
-    if (!req.user || req.user.role !== "ADMIN") {
+    if (!req.user || (req.user as UserProfile).role !== "ADMIN") {
       res.status(403).json({ error: "Forbidden - Admin access required" });
       return;
     }
@@ -27,7 +28,7 @@ export const updateDraft = async (
   res: Response
 ): Promise<void> => {
   try {
-    if (!req.user || req.user.role !== "ADMIN") {
+    if (!req.user || (req.user as UserProfile).role !== "ADMIN") {
       res.status(403).json({ error: "Forbidden - Admin access required" });
       return;
     }
@@ -87,7 +88,7 @@ export const approveDraft = async (
   res: Response
 ): Promise<void> => {
   try {
-    if (!req.user || req.user.role !== "ADMIN") {
+    if (!req.user || (req.user as UserProfile).role !== "ADMIN") {
       res.status(403).json({ error: "Forbidden - Admin access required" });
       return;
     }
@@ -115,7 +116,7 @@ export const approveDraft = async (
       ticketId,
       oldStatus,
       "New",
-      req.user.user_id
+      (req.user as UserProfile).user_id
     );
 
     // Send notification emails to associated users
@@ -150,7 +151,7 @@ export const listActiveTickets = async (
   res: Response
 ): Promise<void> => {
   try {
-    if (!req.user || req.user.role !== "ADMIN") {
+    if (!req.user || (req.user as UserProfile).role !== "ADMIN") {
       res.status(403).json({ error: "Forbidden - Admin access required" });
       return;
     }
@@ -170,7 +171,7 @@ export const assignTicketToUser = async (
   res: Response
 ): Promise<void> => {
   try {
-    if (!req.user || req.user.role !== "ADMIN") {
+    if (!req.user || (req.user as UserProfile).role !== "ADMIN") {
       res.status(403).json({ error: "Forbidden - Admin access required" });
       return;
     }
@@ -215,7 +216,7 @@ export const getAssigneeList = async (
   res: Response
 ): Promise<void> => {
   try {
-    if (!req.user || req.user.role !== "ADMIN") {
+    if (!req.user || (req.user as UserProfile).role !== "ADMIN") {
       res.status(403).json({ error: "Forbidden - Admin access required" });
       return;
     }
@@ -235,7 +236,7 @@ export const getTicketStats = async (
   res: Response
 ): Promise<void> => {
   try {
-    if (!req.user || req.user.role !== "ADMIN") {
+    if (!req.user || (req.user as UserProfile).role !== "ADMIN") {
       res.status(403).json({ error: "Forbidden - Admin access required" });
       return;
     }
@@ -268,7 +269,7 @@ export const getUserNotifications = async (
     }
 
     const notifications = await dbService.getUserNotifications(
-      req.user.user_id
+      (req.user as UserProfile).user_id
     );
     res.json(notifications);
   } catch (err) {

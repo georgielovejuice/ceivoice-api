@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as dbService from "../services/db.service";
+import type { UserProfile } from "../config/passport";
 import * as emailService from "../services/email.service";
 import * as aiService from "../services/ai.service";
 import * as validator from "email-validator";
@@ -153,7 +154,7 @@ export const getAllRequests = async (
   res: Response
 ): Promise<void> => {
   try {
-    if (!req.user || req.user.role !== "ADMIN") {
+    if (!req.user || (req.user as UserProfile).role !== "ADMIN") {
       res.status(403).json({ error: "Forbidden - Admin access required" });
       return;
     }

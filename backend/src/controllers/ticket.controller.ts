@@ -1,4 +1,5 @@
-import { Request, Response } from "express";
+ import { Request, Response } from "express";
+import type { UserProfile } from "../config/passport";
 import * as dbService from "../services/db.service";
 import * as emailService from "../services/email.service";
 import * as aiService from "../services/ai.service";
@@ -141,7 +142,7 @@ export const updateStatus = async (
       ticketId,
       oldStatus,
       new_status,
-      req.user.user_id
+      (req.user as UserProfile).user_id
     );
 
     // Send email notification if status changed
@@ -290,7 +291,7 @@ export const addComment = async (
 
     const comment = await dbService.addComment(
       ticketId,
-      req.user.user_id,
+      (req.user as UserProfile).user_id,
       content,
       is_internal || false
     );
@@ -340,7 +341,7 @@ export const addFollower = async (
     }
 
     const ticketId = parseInt(req.params.id, 10);
-    await dbService.addFollower(ticketId, req.user.user_id);
+    await dbService.addFollower(ticketId, (req.user as UserProfile).user_id);
 
     res.json({ message: "Follower added successfully" });
   } catch (err) {

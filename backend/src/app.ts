@@ -46,7 +46,7 @@ app.get("/health", (_req, res) => {
 app.get("/", (_req, res) => {
   res.json({
     name: "CeiVoice API Backend",
-    version: "1.0.0",
+    version: "2.0.0",
     status: "running",
     authentication: "Passport.js with JWT",
     endpoints: {

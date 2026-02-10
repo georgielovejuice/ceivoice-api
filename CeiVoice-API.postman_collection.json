@@ -1,0 +1,677 @@
+{
+  "info": {
+    "name": "CeiVoice API Backend",
+    "description": "Production-ready TypeScript Express.js API with Passport.js JWT authentication, PostgreSQL database, and comprehensive ticket management system.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "29285956"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"test123\",\n  \"confirmPassword\": \"test123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "description": "Register with email/password"
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"test123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Login with email/password"
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "refresh"]
+            },
+            "description": "Refresh access token"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "me"]
+            },
+            "description": "Get current user profile"
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "logout"]
+            },
+            "description": "Logout (optional - client-side logout)"
+          },
+          "response": []
+        },
+        {
+          "name": "Google OAuth Start",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/google",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "google"]
+            },
+            "description": "Start Google OAuth flow"
+          },
+          "response": []
+        },
+        {
+          "name": "Google OAuth Callback",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/google/callback",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "google", "callback"]
+            },
+            "description": "Google OAuth callback (handled automatically)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Requests",
+      "item": [
+        {
+          "name": "Submit Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"API Request Title\",\n  \"description\": \"Detailed description of the request\",\n  \"email\": \"user@example.com\",\n  \"category_id\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/requests",
+              "host": ["{{base_url}}"],
+              "path": ["api", "requests"]
+            },
+            "description": "Submit a new request (public endpoint)"
+          },
+          "response": []
+        },
+        {
+          "name": "Track Request",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/requests/track/:tracking_id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "requests", "track", ":tracking_id"]
+            },
+            "description": "Track request status using tracking ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Verify Request Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{request_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/requests/verify-token",
+              "host": ["{{base_url}}"],
+              "path": ["api", "requests", "verify-token"]
+            },
+            "description": "Verify request token"
+          },
+          "response": []
+        },
+        {
+          "name": "List All Requests (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/requests",
+              "host": ["{{base_url}}"],
+              "path": ["api", "requests"]
+            },
+            "description": "List all requests (Admin only)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Tickets",
+      "item": [
+        {
+          "name": "List Tickets",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/tickets",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tickets"]
+            },
+            "description": "List all tickets"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Ticket Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/tickets/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tickets", ":id"]
+            },
+            "description": "Get ticket details by ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Ticket",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Title\",\n  \"summary\": \"Updated summary\",\n  \"status\": \"Assigned\",\n  \"category_id\": 1,\n  \"deadline\": \"2026-03-10T00:00:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/tickets/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tickets", ":id"]
+            },
+            "description": "Update ticket (Admin only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Assign Ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assignee_id\": 2\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/tickets/:id/assign",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tickets", ":id", "assign"]
+            },
+            "description": "Assign ticket to a user"
+          },
+          "response": []
+        },
+        {
+          "name": "Add Comment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"This is a comment\",\n  \"is_internal\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/tickets/:id/comments",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tickets", ":id", "comments"]
+            },
+            "description": "Add comment to ticket"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Comments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/tickets/:id/comments",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tickets", ":id", "comments"]
+            },
+            "description": "Get all comments for a ticket"
+          },
+          "response": []
+        },
+        {
+          "name": "Add Follower",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/tickets/:id/followers",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tickets", ":id", "followers"]
+            },
+            "description": "Add follower to ticket"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin - Tickets",
+      "item": [
+        {
+          "name": "List Draft Tickets",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/drafts",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "drafts"]
+            },
+            "description": "List all draft tickets (Admin only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Draft Ticket",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Draft Title\",\n  \"summary\": \"Draft summary\",\n  \"suggested_solution\": \"Suggested solution\",\n  \"category_id\": 1,\n  \"deadline\": \"2026-03-10T00:00:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/drafts/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "drafts", ":id"]
+            },
+            "description": "Update draft ticket (Admin only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Approve Draft",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/drafts/:id/approve",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "drafts", ":id", "approve"]
+            },
+            "description": "Approve and publish draft ticket (Admin only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Reject Draft",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/drafts/:id/reject",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "drafts", ":id", "reject"]
+            },
+            "description": "Reject draft ticket (Admin only)"
+          },
+          "response": []
+        },
+        {
+          "name": "List Active Tickets",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/tickets/active",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "tickets", "active"]
+            },
+            "description": "List active tickets (Admin only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Assign Ticket to User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assignee_id\": 2\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/tickets/:id/assign",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "tickets", ":id", "assign"]
+            },
+            "description": "Assign ticket to user (Admin only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Ticket Metrics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/metrics",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "metrics"]
+            },
+            "description": "Get ticket statistics and metrics (Admin only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Ticket Timeline",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/tickets/:id/timeline",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "tickets", ":id", "timeline"]
+            },
+            "description": "Get ticket timeline/history (Admin only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Archive Ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/tickets/:id/archive",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "tickets", ":id", "archive"]
+            },
+            "description": "Archive ticket (Admin only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Assignee List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/assignees",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "assignees"]
+            },
+            "description": "List all assignees (Admin only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Ticket Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/stats?startDate=2026-01-01&endDate=2026-12-31",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "stats"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2026-01-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2026-12-31"
+                }
+              ]
+            },
+            "description": "Get ticket statistics within date range (Admin only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get User Notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/notifications",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "notifications"]
+            },
+            "description": "Get user notifications (Admin only)"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "request_token",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
