@@ -44,7 +44,7 @@ export const updateDraft = async (
       return;
     }
 
-    if (ticket.status !== "Draft") {
+    if (ticket.status_id !== 1) { // 1 = Draft
       res.status(400).json({ error: "Only draft tickets can be updated" });
       return;
     }
@@ -102,20 +102,23 @@ export const approveDraft = async (
       return;
     }
 
-    if (ticket.status !== "Draft") {
+    if (ticket.status_id !== 1) { // 1 = Draft
       res.status(400).json({ error: "Only draft tickets can be approved" });
       return;
     }
 
-    // Update status to "New"
-    const oldStatus = ticket.status;
-    await dbService.updateTicket(ticketId, { status: "New" });
+    // Get the status IDs for Draft (1) and New (2)
+    const draftStatusId = 1;
+    const newStatusId = 2;
+
+    // Update status to New (2)
+    await dbService.updateTicket(ticketId, { status_id: newStatusId });
 
     // Record status history
     await dbService.createStatusHistory(
       ticketId,
-      oldStatus,
-      "New",
+      draftStatusId,
+      newStatusId,
       (req.user as UserProfile).user_id
     );
 
@@ -156,7 +159,7 @@ export const listActiveTickets = async (
       return;
     }
 
-    const tickets = await dbService.getTicketsByStatus("New");
+    const tickets = await dbService.getTicketsByStatus(2); // 2 = New
     res.json(tickets);
   } catch (err) {
     console.error(err);
@@ -190,17 +193,19 @@ export const assignTicketToUser = async (
       return;
     }
 
-    const oldAssigneeId = ticket.assignments[0]?.assignee_id || null;
+    const oldAssigneeId = ticket.assignee_user_id || null;
     await dbService.assignTicket(ticketId, assignee_id);
     await dbService.createAssignmentHistory(
       ticketId,
       oldAssigneeId,
-      assignee_id
+      assignee_id,
+      (req.user as UserProfile).user_id
     );
 
     // Update status if not already assigned
-    if (ticket.status === "New") {
-      await dbService.updateTicket(ticketId, { status: "Assigned" });
+    const assignedStatusId = 3; // 3 = Assigned
+    if (ticket.status_id === 2) { // If status is New (2)
+      await dbService.updateTicket(ticketId, { status_id: assignedStatusId });
     }
 
     res.json({ message: "Ticket assigned successfully" });

@@ -7,7 +7,7 @@
 import { processQueuedEmails } from "../services/email.service";
 
 const startEmailWorker = async () => {
-  console.log("🚀 Starting Email Queue Worker...");
+  console.log(" Starting Email Queue Worker...");
 
   try {
     await processQueuedEmails();
@@ -19,12 +19,12 @@ const startEmailWorker = async () => {
 
 // Graceful shutdown
 process.on("SIGINT", async () => {
-  console.log("\n📤 Shutting down email worker gracefully...");
+  console.log("\n Shutting down email worker gracefully...");
   process.exit(0);
 });
 
 process.on("SIGTERM", async () => {
-  console.log("\n📤 Shutting down email worker gracefully...");
+  console.log("\n Shutting down email worker gracefully...");
   process.exit(0);
 });
 

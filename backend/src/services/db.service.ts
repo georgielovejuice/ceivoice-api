@@ -8,14 +8,21 @@ export const createTicket = async (
   title: string,
   summary: string,
   categoryId: number,
-  status: string = "Draft"
+  creatorUserId: number,
+  statusId: number = 1 // 1 = Draft
 ) => {
   return await prisma.ticket.create({
     data: {
       title,
       summary,
       category_id: categoryId,
-      status
+      creator_user_id: creatorUserId,
+      status_id: statusId
+    },
+    include: {
+      status: true,
+      category: true,
+      creator: true
     }
   });
 };
@@ -24,10 +31,12 @@ export const getTicketById = async (ticketId: number) => {
   return await prisma.ticket.findUnique({
     where: { ticket_id: ticketId },
     include: {
+      status: true,
       category: true,
-      assignments: { include: { assignee: true } },
+      creator: true,
+      assignee: true,
       comments: { include: { user: true } },
-      status_history: { include: { user: true } },
+      status_history: { include: { new_status: true, changed_by: true } },
       followers: { include: { user: true } },
       ticket_requests: { include: { request: true } }
     }
@@ -43,22 +52,24 @@ export const updateTicket = async (ticketId: number, data: any) => {
 
 export const getDraftTickets = async () => {
   return await prisma.ticket.findMany({
-    where: { status: "Draft" },
+    where: { status_id: 1 }, // 1 = Draft
     include: {
+      status: true,
       category: true,
-      assignments: { include: { assignee: true } },
+      creator: true,
       ticket_requests: { include: { request: true } }
     },
     orderBy: { created_at: "desc" }
   });
 };
 
-export const getTicketsByStatus = async (status: string) => {
+export const getTicketsByStatus = async (statusId: number) => {
   return await prisma.ticket.findMany({
-    where: { status },
+    where: { status_id: statusId },
     include: {
+      status: true,
       category: true,
-      assignments: { include: { assignee: true } }
+      assignee: true
     },
     orderBy: { created_at: "desc" }
   });
@@ -67,17 +78,15 @@ export const getTicketsByStatus = async (status: string) => {
 export const getTicketsByAssignee = async (assigneeId: number) => {
   return await prisma.ticket.findMany({
     where: {
-      assignments: {
-        some: {
-          assignee_id: assigneeId,
-          is_active: true
-        }
-      },
-      status: { notIn: ["Solved", "Failed"] }
+      assignee_user_id: assigneeId,
+      status_id: {
+        notIn: [5, 6] // Exclude Solved (5) and Failed (6)
+      }
     },
     include: {
+      status: true,
       category: true,
-      assignments: { include: { assignee: true } }
+      assignee: true
     },
     orderBy: { deadline: "asc" }
   });
@@ -107,11 +116,11 @@ export const getAllCategories = async () => {
 
 export const getAllAssignees = async () => {
   return await prisma.user.findMany({
-    where: { is_assignee: true },
+    where: { role: { in: ["ASSIGNEE", "ADMIN"] } },
     include: {
       scopes: true,
-      ticket_assignments: {
-        where: { is_active: true }
+      assigned_tickets: {
+        where: { status_id: { notIn: [5, 6] } } // Exclude Solved and Failed
       }
     }
   });
@@ -123,40 +132,30 @@ export const assignTicket = async (
   ticketId: number,
   assigneeId: number
 ) => {
-  // Check if already assigned
-  const existing = await prisma.ticketAssignment.findUnique({
-    where: {
-      ticket_id_assignee_id: { ticket_id: ticketId, assignee_id: assigneeId }
-    }
-  });
-
-  if (existing) {
-    return await prisma.ticketAssignment.update({
-      where: { assignment_id: existing.assignment_id },
-      data: { is_active: true }
-    });
-  }
-
-  return await prisma.ticketAssignment.create({
-    data: { ticket_id: ticketId, assignee_id: assigneeId }
+  return await prisma.ticket.update({
+    where: { ticket_id: ticketId },
+    data: { assignee_user_id: assigneeId },
+    include: { assignee: true, status: true }
   });
 };
 
 export const unassignTicket = async (
-  ticketId: number,
-  assigneeId: number
+  ticketId: number
 ) => {
-  return await prisma.ticketAssignment.updateMany({
-    where: { ticket_id: ticketId, assignee_id: assigneeId },
-    data: { is_active: false }
+  return await prisma.ticket.update({
+    where: { ticket_id: ticketId },
+    data: { assignee_user_id: null },
+    include: { status: true }
   });
 };
 
 export const getTicketAssignees = async (ticketId: number) => {
-  return await prisma.ticketAssignment.findMany({
-    where: { ticket_id: ticketId, is_active: true },
+  const ticket = await prisma.ticket.findUnique({
+    where: { ticket_id: ticketId },
     include: { assignee: true }
   });
+  
+  return ticket?.assignee ? [ticket.assignee] : [];
 };
 
 // ===== COMMENT SERVICE =====
@@ -171,9 +170,9 @@ export const addComment = async (
     data: {
       ticket_id: ticketId,
       user_id: userId,
-      content,
-      is_internal: isInternal
-    }
+      content
+    },
+    include: { user: true }
   });
 };
 
@@ -187,7 +186,7 @@ export const getTicketComments = async (ticketId: number) => {
 
 export const getPublicComments = async (ticketId: number) => {
   return await prisma.comment.findMany({
-    where: { ticket_id: ticketId, is_internal: false },
+    where: { ticket_id: ticketId },
     include: { user: true },
     orderBy: { created_at: "asc" }
   });
@@ -197,16 +196,23 @@ export const getPublicComments = async (ticketId: number) => {
 
 export const createStatusHistory = async (
   ticketId: number,
-  oldStatus: string,
-  newStatus: string,
-  changedBy: number
+  oldStatusId: number,
+  newStatusId: number,
+  changedById: number,
+  changeReason?: string
 ) => {
   return await prisma.statusHistory.create({
     data: {
       ticket_id: ticketId,
-      old_status: oldStatus,
-      new_status: newStatus,
-      changed_by: changedBy
+      old_status_id: oldStatusId,
+      new_status_id: newStatusId,
+      changed_by_id: changedById,
+      change_reason: changeReason
+    },
+    include: {
+      old_status: true,
+      new_status: true,
+      changed_by: true
     }
   });
 };
@@ -214,7 +220,7 @@ export const createStatusHistory = async (
 export const getStatusHistory = async (ticketId: number) => {
   return await prisma.statusHistory.findMany({
     where: { ticket_id: ticketId },
-    include: { user: true },
+    include: { new_status: true, changed_by: true },
     orderBy: { changed_at: "asc" }
   });
 };
@@ -224,13 +230,22 @@ export const getStatusHistory = async (ticketId: number) => {
 export const createAssignmentHistory = async (
   ticketId: number,
   oldAssigneeId: number | null,
-  newAssigneeId: number | null
+  newAssigneeId: number | null,
+  changedById?: number,
+  changeReason?: string
 ) => {
   return await prisma.assignmentHistory.create({
     data: {
       ticket_id: ticketId,
       old_assignee_id: oldAssigneeId,
-      new_assignee_id: newAssigneeId
+      new_assignee_id: newAssigneeId,
+      changed_by_id: changedById || 1, // Default to system if not provided
+      change_reason: changeReason
+    },
+    include: {
+      old_assignee: true,
+      new_assignee: true,
+      changed_by: true
     }
   });
 };
@@ -406,7 +421,7 @@ export const getTicketStats = async (
 
   const totalTickets = await prisma.ticket.count({ where });
   const byStatus = await prisma.ticket.groupBy({
-    by: ["status"],
+    by: ["status_id"],
     where,
     _count: true
   });
@@ -428,32 +443,290 @@ export const getAssigneeMetrics = async (
 
   const currentTickets = await prisma.ticket.count({
     where: {
-      assignments: {
-        some: { assignee_id: assigneeId, is_active: true }
-      },
-      status: { notIn: ["Solved", "Failed"] }
+      assignee_user_id: assigneeId,
+      status_id: { notIn: [5, 6] } // Exclude Solved (5) and Failed (6)
     }
   });
 
   const solvedTickets = await prisma.ticket.count({
     where: {
-      assignments: {
-        some: { assignee_id: assigneeId }
-      },
-      status: "Solved",
+      assignee_user_id: assigneeId,
+      status_id: 5, // Solved
       updated_at: { gte: startDate }
     }
   });
 
   const failedTickets = await prisma.ticket.count({
     where: {
-      assignments: {
-        some: { assignee_id: assigneeId }
-      },
-      status: "Failed",
+      assignee_user_id: assigneeId,
+      status_id: 6, // Failed
       updated_at: { gte: startDate }
     }
   });
 
   return { currentTickets, solvedTickets, failedTickets };
+};
+
+// ===== REPORTING & ANALYTICS SERVICES =====
+
+// Admin Metrics Functions
+
+export const getTicketCount = async (dateFilter: Date | null) => {
+  const where = dateFilter ? { created_at: { gte: dateFilter } } : {};
+  return await prisma.ticket.count({ where });
+};
+
+export const getTicketCountByStatus = async (dateFilter: Date | null) => {
+  const where = dateFilter ? { created_at: { gte: dateFilter } } : {};
+  const result = await prisma.ticket.groupBy({
+    by: ["status_id"],
+    where,
+    _count: { status_id: true }
+  });
+  return result.map(r => ({ status_id: r.status_id, count: r._count.status_id }));
+};
+
+export const getTicketCountByStatuses = async (statusIds: number[]) => {
+  return await prisma.ticket.count({
+    where: { status_id: { in: statusIds } }
+  });
+};
+
+export const getAverageResolutionTime = async (dateFilter: Date | null) => {
+  const where: any = { 
+    status_id: { in: [5, 6] }, // Solved (5) or Failed (6)
+    resolved_at: { not: null },
+    activated_at: { not: null }
+  };
+  
+  if (dateFilter) {
+    where.resolved_at = { ...where.resolved_at, gte: dateFilter };
+  }
+
+  const tickets = await prisma.ticket.findMany({
+    where,
+    select: {
+      activated_at: true,
+      resolved_at: true
+    }
+  });
+
+  if (tickets.length === 0) return 0;
+
+  const totalHours = tickets.reduce((sum, ticket) => {
+    if (!ticket.activated_at || !ticket.resolved_at) return sum;
+    const hours = (ticket.resolved_at.getTime() - ticket.activated_at.getTime()) / (1000 * 60 * 60);
+    return sum + hours;
+  }, 0);
+
+  return parseFloat((totalHours / tickets.length).toFixed(2));
+};
+
+export const getTopCategories = async (dateFilter: Date | null, limit: number = 5) => {
+  const where = dateFilter ? { created_at: { gte: dateFilter } } : {};
+  
+  const result = await prisma.ticket.groupBy({
+    by: ["category_id"],
+    where: { ...where, category_id: { not: null } },
+    _count: { category_id: true },
+    orderBy: { _count: { category_id: "desc" } },
+    take: limit
+  });
+
+  // Enrich with category names
+  const enriched = await Promise.all(
+    result.map(async (r) => {
+      const category = await prisma.category.findUnique({
+        where: { category_id: r.category_id! }
+      });
+      return {
+        category_id: r.category_id,
+        category_name: category?.name || "Unknown",
+        count: r._count.category_id
+      };
+    })
+  );
+
+  return enriched;
+};
+
+export const getAssigneeWorkloadDistribution = async () => {
+  const assignees = await prisma.user.findMany({
+    where: { role: { in: ["ASSIGNEE", "ADMIN"] } },
+    select: {
+      user_id: true,
+      name: true,
+      email: true
+    }
+  });
+
+  const distribution = await Promise.all(
+    assignees.map(async (assignee) => {
+      const activeCount = await prisma.ticket.count({
+        where: {
+          assignee_user_id: assignee.user_id,
+          status_id: { notIn: [5, 6] }
+        }
+      });
+
+      return {
+        assignee_id: assignee.user_id,
+        assignee_name: assignee.name || assignee.email,
+        active_tickets: activeCount
+      };
+    })
+  );
+
+  return distribution.sort((a, b) => b.active_tickets - a.active_tickets);
+};
+
+export const getCategoryTrendsOverTime = async (startDate: Date, daysNum: number) => {
+  // Group tickets by category and day
+  const tickets = await prisma.ticket.findMany({
+    where: {
+      created_at: { gte: startDate },
+      category_id: { not: null }
+    },
+    select: {
+      created_at: true,
+      category_id: true,
+      category: { select: { name: true } }
+    },
+    orderBy: { created_at: "asc" }
+  });
+
+  // Group by category and date
+  const trends: any = {};
+  tickets.forEach(ticket => {
+    const categoryName = ticket.category?.name || "Unknown";
+    const dateKey = ticket.created_at.toISOString().split('T')[0]; // YYYY-MM-DD
+    
+    if (!trends[categoryName]) {
+      trends[categoryName] = {};
+    }
+    trends[categoryName][dateKey] = (trends[categoryName][dateKey] || 0) + 1;
+  });
+
+  return trends;
+};
+
+// Assignee Performance Functions
+
+export const getTicketsByAssigneeAndStatuses = async (
+  assigneeId: number,
+  statusIds: number[],
+  sortBy: string = "deadline"
+) => {
+  const orderBy: any = {};
+  if (sortBy === "deadline") {
+    orderBy.deadline = "asc";
+  } else if (sortBy === "priority") {
+    orderBy.priority = "desc";
+  } else {
+    orderBy.created_at = "desc";
+  }
+
+  return await prisma.ticket.findMany({
+    where: {
+      assignee_user_id: assigneeId,
+      status_id: { in: statusIds }
+    },
+    include: {
+      category: true,
+      status: true,
+      status_history: {
+        orderBy: { changed_at: "desc" },
+        take: 1,
+        include: { new_status: true }
+      }
+    },
+    orderBy
+  });
+};
+
+export const getTicketCountByAssigneeAndStatus = async (
+  assigneeId: number,
+  statusId: number,
+  dateFilter: Date | null
+) => {
+  const where: any = {
+    assignee_user_id: assigneeId,
+    status_id: statusId
+  };
+
+  if (dateFilter) {
+    where.resolved_at = { gte: dateFilter };
+  }
+
+  return await prisma.ticket.count({ where });
+};
+
+export const getAssigneeAvgResolutionTime = async (
+  assigneeId: number,
+  dateFilter: Date | null
+) => {
+  const where: any = {
+    assignee_user_id: assigneeId,
+    status_id: { in: [5, 6] }, // Solved (5) or Failed (6)
+    resolved_at: { not: null },
+    activated_at: { not: null }
+  };
+
+  if (dateFilter) {
+    where.resolved_at = { ...where.resolved_at, gte: dateFilter };
+  }
+
+  const tickets = await prisma.ticket.findMany({
+    where,
+    select: {
+      activated_at: true,
+      resolved_at: true
+    }
+  });
+
+  if (tickets.length === 0) return 0;
+
+  const totalHours = tickets.reduce((sum, ticket) => {
+    if (!ticket.activated_at || !ticket.resolved_at) return sum;
+    const hours = (ticket.resolved_at.getTime() - ticket.activated_at.getTime()) / (1000 * 60 * 60);
+    return sum + hours;
+  }, 0);
+
+  return parseFloat((totalHours / tickets.length).toFixed(2));
+};
+
+export const getAssigneeResolvedByCategory = async (
+  assigneeId: number,
+  dateFilter: Date | null
+) => {
+  const where: any = {
+    assignee_user_id: assigneeId,
+    status_id: { in: [5, 6] }, // Solved (5) or Failed (6)
+    category_id: { not: null }
+  };
+
+  if (dateFilter) {
+    where.resolved_at = { gte: dateFilter };
+  }
+
+  const result = await prisma.ticket.groupBy({
+    by: ["category_id"],
+    where,
+    _count: { category_id: true }
+  });
+
+  // Enrich with category names
+  const enriched = await Promise.all(
+    result.map(async (r) => {
+      const category = await prisma.category.findUnique({
+        where: { category_id: r.category_id! }
+      });
+      return {
+        category_name: category?.name || "Unknown",
+        count: r._count.category_id
+      };
+    })
+  );
+
+  return enriched;
 };

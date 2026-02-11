@@ -188,12 +188,29 @@ backend/
 
 ## Documentation
 
-- [Setup and Installation](SETUP_AND_INSTALLATION.md) - Complete setup guide
-- [Implementation Details](IMPLEMENTATION_DETAILS.md) - Technical architecture
+### 📚 Setup & Installation
+- [Getting Started](docs/setup/GETTING_STARTED.md) - Quick start guide
+- [Setup and Installation](docs/setup/SETUP_AND_INSTALLATION.md) - Complete setup guide
+- [Database Migration Guide](docs/setup/DATABASE_MIGRATION_GUIDE.md) - Database setup
+
+### 🚀 Deployment
+- [Docker Guide](docs/deployment/DOCKER.md) - Docker deployment
+
+### 📖 API Documentation
 - [API Reference](docs/api/README.md) - Endpoint documentation
-- [Quick Reference](docs/QUICK_REFERENCE.md) - Auth quick reference
+- [Postman Collection Guide](docs/api/POSTMAN_COLLECTION_GUIDE.md) - API testing with Postman
+
+### 🧪 Testing
 - [Testing Guide](docs/testing/AUTH_TESTING_GUIDE.md) - Auth testing instructions
+
+### 🔧 Database
+- [Prisma Schema Guide](backend/prisma/README.md) - Database schema and testing
+
+### 📝 Technical Details
+- [Implementation Details](docs/IMPLEMENTATION_DETAILS.md) - Technical architecture
+- [Quick Reference](docs/QUICK_REFERENCE.md) - Auth quick reference
 - [Status](docs/STATUS.md) - Project status and roadmap
+- [Changelog](docs/CHANGELOG.md) - Version history
 
 ### Quick Testing
 

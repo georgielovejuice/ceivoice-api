@@ -360,11 +360,11 @@ export const getUserByEmail = async (email: string) => {
 
 export const getAllAssignees = async () => {
   return await prisma.user.findMany({
-    where: { is_assignee: true },
+    where: { role: { in: ["ASSIGNEE", "ADMIN"] } },
     include: {
       scopes: true,
-      ticket_assignments: {
-        where: { is_active: true }
+      assigned_tickets: {
+        where: { status_id: { notIn: [5, 6] } } // Exclude Solved and Failed
       }
     }
   });
@@ -376,7 +376,7 @@ export const toggleAssigneeRole = async (
 ) => {
   return await prisma.user.update({
     where: { user_id: userId },
-    data: { is_assignee: isAssignee }
+    data: { role: isAssignee ? "ASSIGNEE" : "USER" }
   });
 };
 

@@ -9,6 +9,8 @@ import authRoutes from "./routes/auth.route";
 import ticketRoutes from "./routes/ticket.route";
 import adminTicketRoutes from "./routes/adminticket.route";
 import requestRoutes from "./routes/request.route";
+import workflowRoutes from "./routes/workflow.route";
+import reportingRoutes from "./routes/reporting.route";
 
 const app: Express = express();
 
@@ -36,6 +38,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/requests", requestRoutes);
 app.use("/api/tickets", ticketRoutes);
 app.use("/api/admin", adminTicketRoutes);
+app.use("/api/workflow", workflowRoutes);
+app.use("/api/reporting", reportingRoutes);
 
 // ===== HEALTH CHECK =====
 app.get("/health", (_req, res) => {
@@ -54,6 +58,8 @@ app.get("/", (_req, res) => {
       tickets: "/api/tickets",
       requests: "/api/requests",
       admin: "/api/admin",
+      workflow: "/api/workflow",
+      reporting: "/api/reporting",
       health: "/health"
     }
   });

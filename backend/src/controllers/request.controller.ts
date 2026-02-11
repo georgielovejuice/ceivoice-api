@@ -40,12 +40,13 @@ export const submitRequest = async (
     const draftData = aiService.generateDraft(message);
     const suggestedCategory = aiService.analyzeSuggestedCategory(message);
 
-    // Create draft ticket
+    // Create draft ticket (statusId: 1 = Draft)
+    // CreatorUserId will be set when admin activates it
     const ticket = await dbService.createTicket(
       draftData.title,
       draftData.summary,
       suggestedCategory,
-      "Draft"
+      1 // Default system user (will be updated on activation)
     );
 
     // Update ticket with suggested solution
@@ -126,17 +127,17 @@ export const trackRequest = async (
       ticket: {
         ticket_id: ticket.ticket_id,
         title: ticket.title,
-        status: ticket.status,
+        status: ticket.status?.name || "Draft",
         summary: ticket.summary,
         updated_at: ticket.updated_at,
         deadline: ticket.deadline,
-        comments: ticket.comments
-          .filter((c) => !c.is_internal)
-          .map((c) => ({
+        comments: (ticket.comments || [])
+          .filter((c: any) => !c.is_internal)
+          .map((c: any) => ({
             comment_id: c.comment_id,
             content: c.content,
             created_at: c.created_at,
-            user_name: c.user.name
+            user_name: c.user?.name || "Unknown"
           }))
       }
     });
