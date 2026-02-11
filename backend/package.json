@@ -1,0 +1,80 @@
+{
+  "name": "ceivoice-api-backend",
+  "version": "1.0.0",
+  "description": "CeiVoice API Backend - Merged TypeScript Express.js Application",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "npx nodemon --exec ts-node src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "start:prod": "pnpm run build && pnpm start",
+    "worker:email": "node dist/workers/email.worker.js",
+    "worker:email:dev": "npx nodemon --exec ts-node src/workers/email.worker.ts",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:generate": "prisma generate",
+    "prisma:studio": "prisma studio",
+    "prisma:seed": "ts-node prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/georgielovejuice/test-ceivoice-backend-database.git"
+  },
+  "keywords": [
+    "express",
+    "typescript",
+    "prisma",
+    "api"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/georgielovejuice/test-ceivoice-backend-database/issues"
+  },
+  "homepage": "https://github.com/georgielovejuice/test-ceivoice-backend-database#readme",
+  "dependencies": {
+    "@prisma/client": "^6.19.1",
+    "@react-email/components": "^0.0.12",
+    "@react-email/render": "^0.0.12",
+    "@types/passport": "^1.0.17",
+    "@types/passport-jwt": "^4.0.1",
+    "@types/passport-local": "^1.0.38",
+    "amqplib": "^0.10.4",
+    "axios": "^1.6.5",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "email-validator": "^2.0.4",
+    "express": "^5.2.1",
+    "google-auth-library": "^10.5.0",
+    "googleapis": "^118.0.0",
+    "jsonwebtoken": "^9.0.3",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
+    "passport-jwt": "^4.0.1",
+    "passport-local": "^1.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "resend": "^3.0.0",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/amqplib": "^0.10.5",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/node": "^20.10.6",
+    "@types/passport-google-oauth20": "^2.0.17",
+    "@types/react": "^18.2.43",
+    "@types/uuid": "^9.0.6",
+    "nodemon": "^3.1.11",
+    "prisma": "^6.19.1",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.3.3"
+  }
+}

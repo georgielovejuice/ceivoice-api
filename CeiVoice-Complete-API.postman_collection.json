@@ -1,0 +1,1147 @@
+{
+  "info": {
+    "name": "CeiVoice API - Complete Test Suite",
+    "description": "Comprehensive Postman collection covering all endpoints for the CeiVoice API. Includes authentication, ticket management, admin operations, workflows, requests, and reporting.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "29285956"
+  },
+  "item": [
+    {
+      "name": "🔐 Authentication",
+      "item": [
+        {
+          "name": "Register New User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "  let response = pm.response.json();",
+                  "  pm.environment.set('user_id', response.user.user_id);",
+                  "  pm.environment.set('user_email', response.user.email);",
+                  "  pm.test('Registration successful', () => {",
+                  "    pm.expect(response.user.email).to.include('@');",
+                  "  });",
+                  "  console.log('✓ User registered. ID: ' + response.user.user_id);",
+                  "} else {",
+                  "  pm.test('Registration failed', () => {",
+                  "    pm.expect(pm.response.code).to.equal(201);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Test User\",\n  \"email\": \"testuser{{$timestamp}}@example.com\",\n  \"password\": \"TestPass123!\",\n  \"confirmPassword\": \"TestPass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  let response = pm.response.json();",
+                  "  pm.environment.set('access_token', response.accessToken);",
+                  "  pm.environment.set('refresh_token', response.refreshToken);",
+                  "  pm.environment.set('user_id', response.user.user_id);",
+                  "  pm.test('Login successful', () => {",
+                  "    pm.expect(response.accessToken).to.be.truthy;",
+                  "  });",
+                  "  console.log('✓ Login successful. Token saved.');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"your-password\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  let response = pm.response.json();",
+                  "  pm.environment.set('access_token', response.accessToken);",
+                  "  pm.test('Token refreshed', () => {",
+                  "    pm.expect(response.accessToken).to.be.truthy;",
+                  "  });",
+                  "  console.log('✓ Token refreshed.');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "refresh"]
+            }
+          }
+        },
+        {
+          "name": "Get Current User (Me)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  let response = pm.response.json();",
+                  "  pm.test('User profile retrieved', () => {",
+                  "    pm.expect(response.user_id).to.be.a('number');",
+                  "    pm.expect(response.email).to.include('@');",
+                  "  });",
+                  "  console.log('✓ Current user: ' + response.email);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "me"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "logout"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🎫 Tickets",
+      "item": [
+        {
+          "name": "Get Ticket by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  let response = pm.response.json();",
+                  "  pm.test('Ticket retrieved', () => {",
+                  "    pm.expect(response.ticket_id).to.be.a('number');",
+                  "  });",
+                  "  console.log('✓ Ticket retrieved: ' + response.ticket_id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/tickets/{{ticket_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tickets", "{{ticket_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Draft Tickets (Admin Only)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  let response = pm.response.json();",
+                  "  if (response.drafts && response.drafts.length > 0) {",
+                  "    pm.environment.set('draft_ticket_id', response.drafts[0].ticket_id);",
+                  "  }",
+                  "  pm.test('Draft tickets retrieved', () => {",
+                  "    pm.expect(response.drafts).to.be.an('array');",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/tickets",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tickets"]
+            }
+          }
+        },
+        {
+          "name": "Get Tickets by Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/tickets/status/draft",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tickets", "status", "draft"]
+            }
+          }
+        },
+        {
+          "name": "Edit Draft Ticket (Admin Only)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Draft Title\",\n  \"description\": \"Updated description\",\n  \"category\": \"Technical Issue\",\n  \"priority\": \"High\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/tickets/{{draft_ticket_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tickets", "{{draft_ticket_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Set Ticket Deadline (Admin Only)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deadline\": \"2026-03-15T23:59:59Z\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/tickets/{{ticket_id}}/deadline",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tickets", "{{ticket_id}}", "deadline"]
+            }
+          }
+        },
+        {
+          "name": "Update Ticket Status (Admin Only)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status_id\": 2,\n  \"status_name\": \"new\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/tickets/{{ticket_id}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tickets", "{{ticket_id}}", "status"]
+            }
+          }
+        },
+        {
+          "name": "Assign Ticket (Assignee/Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  pm.test('Ticket assigned', () => {",
+                  "    pm.expect(pm.response.json().assignee_user_id).to.be.a('number');",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assignee_user_id\": {{assignee_user_id}}\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/tickets/{{ticket_id}}/assign",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tickets", "{{ticket_id}}", "assign"]
+            }
+          }
+        },
+        {
+          "name": "Unassign Ticket (Assignee/Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/tickets/{{ticket_id}}/unassign",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tickets", "{{ticket_id}}", "unassign"]
+            }
+          }
+        },
+        {
+          "name": "Add Comment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "  let response = pm.response.json();",
+                  "  pm.environment.set('comment_id', response.comment_id);",
+                  "  pm.test('Comment added', () => {",
+                  "    pm.expect(response.comment_id).to.be.a('number');",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"comment_text\": \"This is a test comment\",\n  \"internal_comment\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/tickets/{{ticket_id}}/comments",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tickets", "{{ticket_id}}", "comments"]
+            }
+          }
+        },
+        {
+          "name": "Get Comments",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  let response = pm.response.json();",
+                  "  pm.test('Comments retrieved', () => {",
+                  "    pm.expect(response.comments).to.be.an('array');",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/tickets/{{ticket_id}}/comments",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tickets", "{{ticket_id}}", "comments"]
+            }
+          }
+        },
+        {
+          "name": "Add Follower",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"follower_user_id\": {{user_id}}\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/tickets/{{ticket_id}}/followers",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tickets", "{{ticket_id}}", "followers"]
+            }
+          }
+        },
+        {
+          "name": "Get Followers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/tickets/{{ticket_id}}/followers",
+              "host": ["{{base_url}}"],
+              "path": ["api", "tickets", "{{ticket_id}}", "followers"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "👨‍💼 Admin Operations",
+      "item": [
+        {
+          "name": "List Draft Tickets",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/drafts",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "drafts"]
+            }
+          }
+        },
+        {
+          "name": "Update Draft",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Admin Updated Draft\",\n  \"description\": \"Updated via admin endpoint\",\n  \"category\": \"System Issue\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/drafts/{{draft_ticket_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "drafts", "{{draft_ticket_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Approve Draft",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  let response = pm.response.json();",
+                  "  pm.environment.set('ticket_id', response.ticket_id);",
+                  "  pm.test('Draft approved', () => {",
+                  "    pm.expect(response.status_name).to.equal('new');",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/drafts/{{draft_ticket_id}}/approve",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "drafts", "{{draft_ticket_id}}", "approve"]
+            }
+          }
+        },
+        {
+          "name": "List Active Tickets",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/active",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "active"]
+            }
+          }
+        },
+        {
+          "name": "Assign Ticket to User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assignee_user_id\": {{assignee_user_id}}\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/{{ticket_id}}/assign",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "{{ticket_id}}", "assign"]
+            }
+          }
+        },
+        {
+          "name": "Get Assignee List",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  let response = pm.response.json();",
+                  "  if (response.assignees && response.assignees.length > 0) {",
+                  "    pm.environment.set('assignee_user_id', response.assignees[0].user_id);",
+                  "  }",
+                  "  pm.test('Assignee list retrieved', () => {",
+                  "    pm.expect(response.assignees).to.be.an('array');",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/assignees",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "assignees"]
+            }
+          }
+        },
+        {
+          "name": "Get Ticket Statistics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/stats",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "stats"]
+            }
+          }
+        },
+        {
+          "name": "Get User Notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/notifications",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "notifications"]
+            }
+          }
+        },
+        {
+          "name": "Mark Notification as Read",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/notifications/{{notification_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "notifications", "{{notification_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "⚙️ Workflows",
+      "item": [
+        {
+          "name": "Activate Draft (Admin Only)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  let response = pm.response.json();",
+                  "  pm.environment.set('ticket_id', response.ticket_id);",
+                  "  pm.test('Draft activated', () => {",
+                  "    pm.expect(response.status_name).to.equal('new');",
+                  "  });",
+                  "  console.log('✓ Draft activated. Ticket ID: ' + response.ticket_id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/workflow/drafts/{{draft_ticket_id}}/activate",
+              "host": ["{{base_url}}"],
+              "path": ["api", "workflow", "drafts", "{{draft_ticket_id}}", "activate"]
+            }
+          }
+        },
+        {
+          "name": "Resolve Ticket (Assignee/Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": [
+                "if (pm.response.code === 200) {",
+                "  pm.test('Ticket resolved', () => {",
+                "    pm.expect(pm.response.json().status_name).to.be.oneOf(['solved', 'failed']);",
+                "  });",
+                "  console.log('✓ Ticket resolved');",
+                "}"
+              ]
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resolution_type\": \"solved\",\n  \"resolution_comment\": \"Issue has been resolved successfully.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/workflow/tickets/{{ticket_id}}/resolve",
+              "host": ["{{base_url}}"],
+              "path": ["api", "workflow", "tickets", "{{ticket_id}}", "resolve"]
+            }
+          }
+        },
+        {
+          "name": "Renew Ticket (Assignee/Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"renewal_comment\": \"Reopening ticket for further investigation.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/workflow/tickets/{{ticket_id}}/renew",
+              "host": ["{{base_url}}"],
+              "path": ["api", "workflow", "tickets", "{{ticket_id}}", "renew"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📋 Requests",
+      "item": [
+        {
+          "name": "Submit Request (Public)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "  let response = pm.response.json();",
+                  "  pm.environment.set('tracking_id', response.tracking_id);",
+                  "  pm.test('Request submitted', () => {",
+                  "    pm.expect(response.tracking_id).to.be.truthy;",
+                  "  });",
+                  "  console.log('✓ Request submitted. Tracking ID: ' + response.tracking_id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Customer Support Request\",\n  \"description\": \"I need help with my account setup\",\n  \"email\": \"customer@example.com\",\n  \"category\": \"Support\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/requests",
+              "host": ["{{base_url}}"],
+              "path": ["api", "requests"]
+            }
+          }
+        },
+        {
+          "name": "Track Request (Public)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/requests/track/{{tracking_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "requests", "track", "{{tracking_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Get All Requests (Admin Only)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/requests",
+              "host": ["{{base_url}}"],
+              "path": ["api", "requests"]
+            }
+          }
+        },
+        {
+          "name": "Verify Tracking Token (Public)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tracking_id\": \"{{tracking_id}}\",\n  \"token\": \"your-tracking-token\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/requests/verify-token",
+              "host": ["{{base_url}}"],
+              "path": ["api", "requests", "verify-token"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📊 Reporting",
+      "item": [
+        {
+          "name": "Get Admin Metrics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/reporting/admin/metrics?period=last_30_days",
+              "host": ["{{base_url}}"],
+              "path": ["api", "reporting", "admin", "metrics"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "last_30_days"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Category Trends",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/reporting/admin/category-trends?days=30",
+              "host": ["{{base_url}}"],
+              "path": ["api", "reporting", "admin", "category-trends"],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "30"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Assignee Workload",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/reporting/assignee/workload?sort_by=deadline",
+              "host": ["{{base_url}}"],
+              "path": ["api", "reporting", "assignee", "workload"],
+              "query": [
+                {
+                  "key": "sort_by",
+                  "value": "deadline"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Assignee Performance",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/reporting/assignee/performance?period=last_30_days",
+              "host": ["{{base_url}}"],
+              "path": ["api", "reporting", "assignee", "performance"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "last_30_days"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔧 System",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            }
+          }
+        },
+        {
+          "name": "API Root Info",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": ["{{base_url}}"],
+              "path": [""]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Set default values if not already set",
+          "if (!pm.environment.get('base_url')) {",
+          "  pm.environment.set('base_url', 'http://localhost:5000');",
+          "}",
+          "if (!pm.environment.get('access_token')) {",
+          "  pm.environment.set('access_token', 'your-token-here');",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "ticket_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "draft_ticket_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "assignee_user_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tracking_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "comment_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "notification_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_email",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

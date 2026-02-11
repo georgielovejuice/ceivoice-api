@@ -1,0 +1,40 @@
+# Dependencies
+node_modules
+backend/node_modules
+pnpm-lock.yaml
+
+# Development
+npm-debug.log
+.npm
+
+# Environment (don't copy .env files)
+.env
+.env.local
+.env.*.local
+
+# Git
+.git
+.gitignore
+.github
+
+# Build artifacts
+dist
+build
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+.DS_Store
+
+# Documentation
+docs/
+README.md
+*.md
+
+# Other
+.cache
+tmp
+
+
