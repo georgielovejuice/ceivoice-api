@@ -7,17 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ============================================================================
-// REFINED SCHEMA - NORMALIZED WITH LOOKUP TABLES & CLEAR WORKFLOW
-// ============================================================================
-// Design Principles:
-// 1. Normalization: Use lookup tables for statuses, categories (avoid hardcoded strings)
-// 2. Single Source of Truth: Ticket table has current state, history tables for audit
-// 3. Clear Workflow: Draft → New (activation) → Assigned → Solving → Solved/Failed
-// 4. Transactional (OLTP): Optimized for write operations with audit trails
-// 5. Reporting Ready: Includes fields for SLA tracking and performance metrics
-// ============================================================================
-
 // ===== LOOKUP TABLES (Reference Data) =====
 
 model TicketStatus {
