@@ -1,68 +1,105 @@
-export interface DraftTicketData {
+import ollama from 'ollama';
+
+// 1. Update Interface to include assignee_id
+export interface AiTicketDraft {
   title: string;
+  category: string;
   summary: string;
   suggested_solution: string;
-  category_id: number;
+  priority: 'Low' | 'Medium' | 'High' | 'Critical';
+  assignee_id: number | null; // <--- NEW FIELD
 }
 
-/**
- * Generate draft ticket data from user message
- * This is a placeholder that can be enhanced with actual AI/ML models
- */
-export const generateDraft = (message: string): DraftTicketData => {
-  return {
-    title: "User reported an issue",
-    summary: message.substring(0, 500),
-    suggested_solution: "Check system status and user permissions",
-    category_id: 1
-  };
-};
+export class AiService {
+  private modelName = 'ceivoice-ai'; 
 
-/**
- * Analyze ticket for suggested category
- */
-export const analyzeSuggestedCategory = (message: string): number => {
-  // Simple keyword-based categorization
-  const lowerMessage = message.toLowerCase();
-  
-  if (lowerMessage.includes("payment") || lowerMessage.includes("billing")) return 2;
-  if (lowerMessage.includes("technical") || lowerMessage.includes("bug")) return 3;
-  if (lowerMessage.includes("feature") || lowerMessage.includes("request")) return 4;
-  
-  return 1; // Default category
-};
+  /**
+   * Analyzes a raw user message and converts it into a structured Ticket Draft.
+   * @param userMessage - The text from the Request
+   * @param availableCategories - Array of category names
+   * @param availableAgents - Array of agents with their skills (scopes)
+   */
+  async generateDraft(
+    userMessage: string, 
+    availableCategories: string[],
+    availableAgents: any[] = [] // <--- NEW PARAMETER
+  ): Promise<AiTicketDraft> {
+    
+    // Format agents for the AI prompt
+    const agentList = availableAgents.map(a => ({
+      id: a.user_id,
+      name: a.name,
+      // Assuming 'scopes' is an array of objects like { scope_name: 'Hardware' }
+      skills: a.scopes ? a.scopes.map((s: any) => s.scope_name).join(", ") : ""
+    }));
 
-/**
- * Generate suggested solution based on ticket content
- */
-export const generateSuggestedSolution = (title: string, summary: string): string => {
-  const content = `${title} ${summary}`.toLowerCase();
-  
-  if (content.includes("password") || content.includes("login")) {
-    return "Verify account credentials and reset password if needed";
-  }
-  if (content.includes("error") || content.includes("crash")) {
-    return "Check error logs and restart the application";
-  }
-  if (content.includes("slow") || content.includes("performance")) {
-    return "Analyze system resources and optimize queries";
-  }
-  
-  return "Review ticket details and escalate if necessary";
-};
+    // 2. Construct the prompt
+    const prompt = `
+      You are an expert IT Support Dispatcher. Analyze the user's request and output a JSON object.
 
-/**
- * Estimate priority based on keywords
- */
-export const estimatePriority = (message: string): string => {
-  const lowerMessage = message.toLowerCase();
-  
-  if (lowerMessage.includes("urgent") || lowerMessage.includes("critical") || lowerMessage.includes("critical")) {
-    return "HIGH";
+      CONTEXT:
+      - Valid Categories: ${JSON.stringify(availableCategories)}
+      - Valid Priorities: ["Low", "Medium", "High", "Critical"]
+      - Available Agents: ${JSON.stringify(agentList)}
+
+      USER REQUEST:
+      "${userMessage}"
+
+      INSTRUCTIONS:
+      1. title: Create a concise, professional title (max 80 chars).
+      2. category: MUST be one of the Valid Categories provided above.
+      3. assignee_id: Select the 'id' of the agent whose skills best match the request. If no strong match, return null.
+      4. summary: Summarize the issue in 2-3 sentences.
+      5. suggested_solution: specific, actionable steps to resolve this technical issue.
+      6. priority: Assess urgency based on business impact.
+
+      OUTPUT FORMAT (JSON ONLY, NO MARKDOWN):
+      {
+        "title": "...",
+        "category": "...",
+        "assignee_id": 123, 
+        "summary": "...",
+        "suggested_solution": "...",
+        "priority": "..."
+      }
+    `;
+
+    try {
+      const response = await ollama.chat({
+        model: this.modelName,
+        format: 'json',
+        messages: [{ role: 'user', content: prompt }],
+        options: { temperature: 0.1 }
+      });
+
+      const data = JSON.parse(response.message.content);
+
+      // Fallback logic
+      const finalCategory = availableCategories.includes(data.category) 
+        ? data.category 
+        : availableCategories[0] || 'General';
+
+      return {
+        title: data.title || "New Support Request",
+        category: finalCategory,
+        summary: data.summary,
+        suggested_solution: data.suggested_solution,
+        priority: data.priority,
+        assignee_id: data.assignee_id || null // <--- RETURN ID
+      };
+
+    } catch (error) {
+      console.error("❌ AI Service Error:", error);
+      return {
+        title: "New Support Request",
+        category: availableCategories[0] || "Uncategorized",
+        summary: userMessage.substring(0, 200),
+        suggested_solution: "AI processing failed. Please review manually.",
+        priority: "Medium",
+        assignee_id: null
+      };
+    }
   }
-  if (lowerMessage.includes("important")) {
-    return "MEDIUM";
-  }
-  
-  return "LOW";
-};
+}
+
+export const aiService = new AiService();

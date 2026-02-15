@@ -4,6 +4,9 @@
  * Run this as a separate service: node dist/workers/email.worker.js
  */
 
+import dotenv from "dotenv";
+dotenv.config();
+
 import { processQueuedEmails } from "../services/email.service";
 
 const startEmailWorker = async () => {

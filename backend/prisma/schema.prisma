@@ -7,14 +7,22 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// =======================
-// ENUMS
-// =======================
+// ===== LOOKUP TABLES (Reference Data) =====
 
-enum user_role {
-  User
-  Admin
-  Assignee
+model TicketStatus {
+  status_id   Int     @id @default(autoincrement())
+  name        String  @unique @db.VarChar(20) // Draft, New, Assigned, Solving, Solved, Failed, Renew
+  step_order  Int     @unique // Defines workflow progression order
+  description String?
+  is_active   Boolean @default(true) // Soft delete flag for future status retirement
+
+  // Relations
+  tickets         Ticket[]
+  status_history  StatusHistory[] @relation("NewStatus")
+  old_status_history StatusHistory[] @relation("OldStatus")
+
+  @@index([step_order])
+  @@map("ticket_statuses")
 }
 
 enum ticket_status {
