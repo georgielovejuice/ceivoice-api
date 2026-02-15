@@ -1,405 +1,168 @@
-import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
+import { PrismaClient } from '@prisma/client'
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient()
 
 async function main() {
-  console.log('🌱 Starting database seed...\n');
+  console.log('🌱 Starting seed...')
 
-  // ===== 1. SEED TICKET STATUSES (LOOKUP TABLE) =====
-  console.log('📊 Seeding Ticket Statuses...');
-  const statuses = [
-    { name: 'Draft', step_order: 1, description: 'AI-generated draft, pending admin review' },
-    { name: 'New', step_order: 2, description: 'Activated by admin, awaiting assignment' },
-    { name: 'Assigned', step_order: 3, description: 'Assigned to an assignee' },
-    { name: 'Solving', step_order: 4, description: 'Actively being worked on' },
-    { name: 'Solved', step_order: 5, description: 'Successfully resolved' },
-    { name: 'Failed', step_order: 6, description: 'Could not be resolved' },
-    { name: 'Renew', step_order: 7, description: 'Reopened for additional work' },
-  ];
-
-  for (const status of statuses) {
-    await prisma.ticketStatus.upsert({
-      where: { name: status.name },
+  // ==============================================
+  // 1. SETUP LOOKUP DATA
+  // ==============================================
+  
+  const departments = ['IT', 'HR', 'Finance', 'Legal']
+  for (const dept of departments) {
+    await prisma.department.upsert({
+      where: { department: dept },
       update: {},
-      create: status,
-    });
+      create: { department: dept },
+    })
   }
-  console.log('✅ Seeded 7 ticket statuses\n');
 
-  // ===== 2. SEED CATEGORIES (LOOKUP TABLE) =====
-  console.log('📁 Seeding Categories...');
-  const categories = [
-    { name: 'IT Support', sla_hours: 24, description: 'Information Technology issues' },
-    { name: 'HR Inquiry', sla_hours: 48, description: 'Human Resources related questions' },
-    { name: 'Finance', sla_hours: 72, description: 'Financial and accounting matters' },
-    { name: 'Facilities', sla_hours: 24, description: 'Office facilities and maintenance' },
-    { name: 'General', sla_hours: 48, description: 'General inquiries and miscellaneous' },
-  ];
-
-  for (const category of categories) {
+  const categories = ['Technical Support', 'Billing', 'Feature Request', 'Access Rights']
+  for (const cat of categories) {
     await prisma.category.upsert({
-      where: { name: category.name },
+      where: { catagory: cat },
       update: {},
-      create: category,
-    });
+      create: { catagory: cat },
+    })
   }
-  console.log('✅ Seeded 5 categories\n');
 
-  // ===== 3. SEED USERS =====
-  console.log('👥 Seeding Users...');
-  
-  // Hash password for test users
-  const hashedPassword = await bcrypt.hash('Test123!', 10);
+  // ==============================================
+  // 2. CREATE USERS
+  // ==============================================
 
-  // Admin User
-  const admin = await prisma.user.upsert({
-    where: { email: 'admin@ceivoice.com' },
-    update: {},
-    create: {
+  const admin = await prisma.user.create({
+    data: {
       email: 'admin@ceivoice.com',
-      name: 'Admin User',
-      password: hashedPassword,
-      role: 'ADMIN',
-      is_active: true,
+      full_name: 'Sarah Connor',
+      role: 'Admin',
+      google_id: 'google_123_admin',
     },
-  });
+  })
 
-  // Assignees
-  const assignee1 = await prisma.user.upsert({
-    where: { email: 'it.support@ceivoice.com' },
-    update: {},
-    create: {
-      email: 'it.support@ceivoice.com',
-      name: 'IT Support Team',
-      password: hashedPassword,
-      role: 'ASSIGNEE',
-      is_active: true,
-    },
-  });
-
-  const assignee2 = await prisma.user.upsert({
-    where: { email: 'hr.team@ceivoice.com' },
-    update: {},
-    create: {
-      email: 'hr.team@ceivoice.com',
-      name: 'HR Team',
-      password: hashedPassword,
-      role: 'ASSIGNEE',
-      is_active: true,
-    },
-  });
-
-  // Regular Users
-  const user1 = await prisma.user.upsert({
-    where: { email: 'john.doe@company.com' },
-    update: {},
-    create: {
-      email: 'john.doe@company.com',
-      name: 'John Doe',
-      password: hashedPassword,
-      role: 'USER',
-      is_active: true,
-    },
-  });
-
-  const user2 = await prisma.user.upsert({
-    where: { email: 'jane.smith@company.com' },
-    update: {},
-    create: {
-      email: 'jane.smith@company.com',
-      name: 'Jane Smith',
-      password: hashedPassword,
-      role: 'USER',
-      is_active: true,
-    },
-  });
-
-  console.log('✅ Seeded 5 users (1 admin, 2 assignees, 2 users)\n');
-
-  // ===== 4. SEED ASSIGNEE SCOPES =====
-  console.log('🎯 Seeding Assignee Scopes...');
-  await prisma.assigneeScope.createMany({
-    data: [
-      { assignee_id: assignee1.user_id, scope_name: 'IT Support' },
-      { assignee_id: assignee1.user_id, scope_name: 'Facilities' },
-      { assignee_id: assignee2.user_id, scope_name: 'HR Inquiry' },
-      { assignee_id: assignee2.user_id, scope_name: 'General' },
-    ],
-    skipDuplicates: true,
-  });
-  console.log('✅ Seeded assignee scopes\n');
-
-  // ===== 5. SEED SAMPLE REQUESTS =====
-  console.log('📬 Seeding Sample Requests...');
-  const request1 = await prisma.request.create({
+  const assigneeIT = await prisma.user.create({
     data: {
-      email: 'customer@example.com',
-      message: 'My laptop is not connecting to the company VPN. I\'ve tried restarting but the issue persists.',
+      email: 'tech_lead@ceivoice.com',
+      full_name: 'Elliot Alderson',
+      role: 'Assignee',
+      user_departments: {
+        create: { department_name: 'IT' }
+      }
     },
-  });
+  })
 
-  const request2 = await prisma.request.create({
-    data: {
-      email: 'employee@company.com',
-      message: 'I need information about the new health insurance enrollment process.',
-    },
-  });
-
-  console.log('✅ Seeded 2 sample requests\n');
-
-  // ===== 6. SEED SAMPLE TICKETS =====
-  console.log('🎫 Seeding Sample Tickets...');
+  const user1 = await prisma.user.create({
+    data: { email: 'john.doe@example.com', full_name: 'John Doe', role: 'User' },
+  })
   
-  // Get status IDs
-  const draftStatus = await prisma.ticketStatus.findUnique({ where: { name: 'Draft' } });
-  const newStatus = await prisma.ticketStatus.findUnique({ where: { name: 'New' } });
-  const assignedStatus = await prisma.ticketStatus.findUnique({ where: { name: 'Assigned' } });
-  const solvingStatus = await prisma.ticketStatus.findUnique({ where: { name: 'Solving' } });
-  const solvedStatus = await prisma.ticketStatus.findUnique({ where: { name: 'Solved' } });
-  
-  // Get category IDs
-  const itCategory = await prisma.category.findUnique({ where: { name: 'IT Support' } });
-  const hrCategory = await prisma.category.findUnique({ where: { name: 'HR Inquiry' } });
+  const user2 = await prisma.user.create({
+    data: { email: 'jane.smith@example.com', full_name: 'Jane Smith', role: 'User' },
+  })
 
-  // Ticket 1: Draft status (AI-generated, pending admin review)
-  const ticket1 = await prisma.ticket.create({
+  console.log('✅ Users created.')
+
+  // ==============================================
+  // 3. CREATE TICKETS
+  // ==============================================
+
+  // --- Scenario 1: Standard Ticket ---
+  await prisma.ticket.create({
     data: {
-      title: 'VPN Connection Issue - Unable to Access Company Network',
-      summary: 'User is experiencing VPN connection problems preventing access to company network resources.',
-      suggested_solution: 'Check VPN client version, verify credentials, and ensure network connectivity. May need to reinstall VPN client.',
-      status_id: draftStatus!.status_id,
-      category_id: itCategory!.category_id,
-      creator_user_id: admin.user_id,
-      priority: 'High',
+      ticket_id: 'TKT-2026-001',
+      original_message: 'My laptop screen keeps flickering.',
+      title: 'Laptop Screen Flickering',
+      summary: 'Hardware display issues.',
+      suggested_solution: 'Update drivers.',
+      category_name: 'Technical Support',
+      status: 'Solving',
+      creator_id: user1.user_id,
+      assignments: {
+        create: { assignee_id: assigneeIT.user_id }
+      },
+      comments: {
+        create: [
+          {
+            author_id: user1.user_id,
+            content: 'It happens mostly when I share my screen.',
+            visibility: 'Public'
+          },
+          {
+            author_id: assigneeIT.user_id,
+            content: 'Checking warranty status.',
+            visibility: 'Internal'
+          }
+        ]
+      }
     },
-  });
+  })
 
-  // Link ticket to request
-  await prisma.ticketRequest.create({
+  // --- Scenario 2: Parent Ticket (Mass Issue) ---
+  const parentTicket = await prisma.ticket.create({
     data: {
-      ticket_id: ticket1.ticket_id,
-      request_id: request1.request_id,
-    },
-  });
+      ticket_id: 'INCIDENT-WIFI-MAIN',
+      original_message: 'Nobody on the 4th floor can connect to WiFi.',
+      title: '4th Floor WiFi Outage',
+      category_name: 'Technical Support',
+      status: 'Assigned',
+      creator_id: admin.user_id,
+      assignments: {
+        create: { assignee_id: assigneeIT.user_id }
+      }
+    }
+  })
 
-  // Ticket 2: New status (activated, awaiting assignment)
-  const ticket2 = await prisma.ticket.create({
+  // --- Scenario 3: Merged Child Tickets ---
+  
+  // Create Child Ticket 1
+  await prisma.ticket.create({
     data: {
-      title: 'Health Insurance Enrollment Information Request',
-      summary: 'Employee needs information about the health insurance enrollment process and deadlines.',
-      suggested_solution: 'Provide enrollment guide, deadline information, and point of contact for benefits team.',
-      status_id: newStatus!.status_id,
-      category_id: hrCategory!.category_id,
-      creator_user_id: admin.user_id,
-      activated_by_id: admin.user_id,
-      activated_at: new Date(),
-      deadline: new Date(Date.now() + 48 * 60 * 60 * 1000), // 48 hours from now
-      priority: 'Medium',
-    },
-  });
+      ticket_id: 'TKT-WIFI-002',
+      original_message: 'Internet is down on my phone.',
+      title: 'Internet Issues',
+      category_name: 'Technical Support',
+      status: 'Draft',
+      creator_id: user1.user_id,
+      parent_ticket_id: parentTicket.ticket_id, // Link to Parent
+    }
+  })
 
-  await prisma.ticketRequest.create({
+  // MANUALLY Add User 1 as a follower of the PARENT ticket
+  // We do this separately to avoid the nesting conflict
+  await prisma.ticketFollower.create({
     data: {
-      ticket_id: ticket2.ticket_id,
-      request_id: request2.request_id,
-    },
-  });
+      ticket_id: parentTicket.ticket_id, // The Parent Ticket
+      follower_id: user1.user_id         // The User who submitted the child ticket
+    }
+  })
 
-  // Ticket 3: Assigned status
-  const ticket3 = await prisma.ticket.create({
+  // Create Child Ticket 2
+  await prisma.ticket.create({
     data: {
-      title: 'Email Client Configuration Issue',
-      summary: 'User unable to send emails from Outlook client. Receiving timeout errors.',
-      suggested_solution: 'Verify SMTP settings, check firewall rules, test with webmail.',
-      status_id: assignedStatus!.status_id,
-      category_id: itCategory!.category_id,
-      creator_user_id: user1.user_id,
-      assignee_user_id: assignee1.user_id,
-      activated_by_id: admin.user_id,
-      activated_at: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
-      deadline: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
-      priority: 'High',
-    },
-  });
+      ticket_id: 'TKT-WIFI-003',
+      original_message: 'Cannot connect to CEI-Guest network.',
+      title: 'Network Error',
+      category_name: 'Technical Support',
+      status: 'Draft',
+      creator_id: user2.user_id,
+      parent_ticket_id: parentTicket.ticket_id,
+    }
+  })
 
-  // Ticket 4: Solving status (in progress)
-  const ticket4 = await prisma.ticket.create({
+  // MANUALLY Add User 2 as a follower of the PARENT ticket
+  await prisma.ticketFollower.create({
     data: {
-      title: 'Password Reset Request for HR Portal',
-      summary: 'User forgot password for HR self-service portal and unable to reset via email.',
-      suggested_solution: 'Verify user identity and manually reset password. Check email delivery settings.',
-      status_id: solvingStatus!.status_id,
-      category_id: hrCategory!.category_id,
-      creator_user_id: user2.user_id,
-      assignee_user_id: assignee2.user_id,
-      activated_by_id: admin.user_id,
-      activated_at: new Date(Date.now() - 12 * 60 * 60 * 1000), // 12 hours ago
-      deadline: new Date(Date.now() + 36 * 60 * 60 * 1000), // 36 hours from now
-      priority: 'Medium',
-    },
-  });
+      ticket_id: parentTicket.ticket_id,
+      follower_id: user2.user_id
+    }
+  })
 
-  console.log('✅ Seeded 4 sample tickets\n');
-
-  // ===== 7. SEED COMMENTS =====
-  console.log('💬 Seeding Comments...');
-  
-  await prisma.comment.createMany({
-    data: [
-      {
-        ticket_id: ticket3.ticket_id,
-        user_id: assignee1.user_id,
-        content: 'I\'ve started investigating this issue. Checking the SMTP configuration now.',
-        visibility: 'PUBLIC',
-      },
-      {
-        ticket_id: ticket4.ticket_id,
-        user_id: assignee2.user_id,
-        content: 'User identity verified. Proceeding with password reset.',
-        visibility: 'INTERNAL',
-      },
-      {
-        ticket_id: ticket4.ticket_id,
-        user_id: user2.user_id,
-        content: 'Thank you for the quick response!',
-        visibility: 'PUBLIC',
-      },
-    ],
-  });
-
-  console.log('✅ Seeded 3 comments\n');
-
-  // ===== 8. SEED STATUS HISTORIES =====
-  console.log('📜 Seeding Status Histories...');
-  
-  await prisma.statusHistory.createMany({
-    data: [
-      {
-        ticket_id: ticket2.ticket_id,
-        old_status_id: draftStatus!.status_id,
-        new_status_id: newStatus!.status_id,
-        changed_by_id: admin.user_id,
-        change_reason: 'Reviewed and activated by admin',
-      },
-      {
-        ticket_id: ticket3.ticket_id,
-        old_status_id: newStatus!.status_id,
-        new_status_id: assignedStatus!.status_id,
-        changed_by_id: admin.user_id,
-        change_reason: 'Assigned to IT Support team',
-      },
-      {
-        ticket_id: ticket4.ticket_id,
-        old_status_id: assignedStatus!.status_id,
-        new_status_id: solvingStatus!.status_id,
-        changed_by_id: assignee2.user_id,
-        change_reason: 'Started working on the issue',
-      },
-    ],
-  });
-
-  console.log('✅ Seeded status history records\n');
-
-  // ===== 9. SEED ASSIGNMENT HISTORIES =====
-  console.log('📋 Seeding Assignment Histories...');
-  
-  await prisma.assignmentHistory.createMany({
-    data: [
-      {
-        ticket_id: ticket3.ticket_id,
-        old_assignee_id: null,
-        new_assignee_id: assignee1.user_id,
-        changed_by_id: admin.user_id,
-        change_reason: 'Initial assignment to IT Support',
-      },
-      {
-        ticket_id: ticket4.ticket_id,
-        old_assignee_id: null,
-        new_assignee_id: assignee2.user_id,
-        changed_by_id: admin.user_id,
-        change_reason: 'Assigned to HR team',
-      },
-    ],
-  });
-
-  console.log('✅ Seeded assignment history records\n');
-
-  // ===== 10. SEED FOLLOWERS =====
-  console.log('👁️ Seeding Followers...');
-  
-  await prisma.follower.createMany({
-    data: [
-      { ticket_id: ticket3.ticket_id, user_id: user1.user_id },
-      { ticket_id: ticket3.ticket_id, user_id: admin.user_id },
-      { ticket_id: ticket4.ticket_id, user_id: user2.user_id },
-    ],
-    skipDuplicates: true,
-  });
-
-  console.log('✅ Seeded followers\n');
-
-  // ===== 11. SEED NOTIFICATIONS =====
-  console.log('🔔 Seeding Notifications...');
-  
-  await prisma.notification.createMany({
-    data: [
-      {
-        ticket_id: ticket3.ticket_id,
-        user_id: user1.user_id,
-        type: 'assignment',
-        message: 'Your ticket has been assigned to IT Support Team',
-        is_read: false,
-      },
-      {
-        ticket_id: ticket3.ticket_id,
-        user_id: assignee1.user_id,
-        type: 'assignment',
-        message: 'You have been assigned a new ticket: Email Client Configuration Issue',
-        is_read: true,
-      },
-      {
-        ticket_id: ticket4.ticket_id,
-        user_id: user2.user_id,
-        type: 'status_change',
-        message: 'Your ticket status changed to: Solving',
-        is_read: false,
-      },
-    ],
-  });
-
-  console.log('✅ Seeded notifications\n');
-
-  // ===== SUMMARY =====
-  console.log('═══════════════════════════════════════════');
-  console.log('✨ Database Seeding Complete!');
-  console.log('═══════════════════════════════════════════');
-  console.log('📊 Ticket Statuses: 7');
-  console.log('📁 Categories: 5');
-  console.log('👥 Users: 5 (1 admin, 2 assignees, 2 users)');
-  console.log('🎯 Assignee Scopes: 4');
-  console.log('📬 Requests: 2');
-  console.log('🎫 Tickets: 4 (various statuses)');
-  console.log('💬 Comments: 3');
-  console.log('📜 Status Histories: 3');
-  console.log('📋 Assignment Histories: 2');
-  console.log('👁️ Followers: 3');
-  console.log('🔔 Notifications: 3');
-  console.log('═══════════════════════════════════════════');
-  console.log('\n📝 Test Credentials:');
-  console.log('   Admin: admin@ceivoice.com / Test123!');
-  console.log('   IT Support: it.support@ceivoice.com / Test123!');
-  console.log('   HR Team: hr.team@ceivoice.com / Test123!');
-  console.log('   User 1: john.doe@company.com / Test123!');
-  console.log('   User 2: jane.smith@company.com / Test123!');
-  console.log('═══════════════════════════════════════════\n');
+  console.log('✅ Tickets (including Mass Issue Merge) created.')
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Error seeding database:', e);
-    process.exit(1);
+    console.error(e)
   })
   .finally(async () => {
-    await prisma.$disconnect();
-  });
+    await prisma.$disconnect()
+  })

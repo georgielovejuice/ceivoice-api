@@ -25,258 +25,160 @@ model TicketStatus {
   @@map("ticket_statuses")
 }
 
-model Category {
-  category_id Int     @id @default(autoincrement())
-  name        String  @unique @db.VarChar(50)
-  sla_hours   Int     @default(24) // Service Level Agreement specific to category
-  description String?
-  is_active   Boolean @default(true)
-
-  tickets Ticket[]
-
-  @@index([name])
-  @@map("categories")
+enum ticket_status {
+  Draft
+  New
+  Assigned
+  Solving
+  Solved
+  Failed
+  Renew
 }
 
-// ===== CORE ENTITIES =====
+enum comment_visibility {
+  Internal
+  Public
+}
+
+// =======================
+// MODELS
+// =======================
 
 model User {
-  user_id    Int      @id @default(autoincrement())
-  email      String   @unique @db.VarChar(255)
-  name       String?  @db.VarChar(100)
-  password   String?  // For email/password authentication (hashed)
-  role       String   @db.VarChar(20) // USER, ASSIGNEE, ADMIN
-  google_id  String?  @unique
-  is_active  Boolean  @default(true) // Soft delete flag - never delete users
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  user_id   Int       @unique @default(autoincrement()) // Unique required for relations to work
+  email     String
+  full_name String?
+  google_id String?
+  avartar   String?   // Kept spelling from SQL
+  role      user_role @default(User)
 
   // Relations
-  created_tickets      Ticket[]            @relation("TicketCreator")
-  assigned_tickets     Ticket[]            @relation("CurrentAssignee")
-  comments             Comment[]
-  status_changes       StatusHistory[]     @relation("StatusChangedBy")
-  assignment_changes   AssignmentHistory[] @relation("AssignmentChangedBy")
-  old_assignments      AssignmentHistory[] @relation("OldAssignee")
-  new_assignments      AssignmentHistory[] @relation("NewAssignee")
-  followers            Follower[]
-  notifications        Notification[]
-  scopes               AssigneeScope[]
-  oauth_tokens         OAuthToken[]
-  ticket_activations   Ticket[]            @relation("TicketActivatedBy")
+  created_tickets    Ticket[]            @relation("TicketCreator")
+  assigned_tickets   TicketAssignment[]
+  followed_tickets   TicketFollower[]
+  comments           Comment[]
+  audit_logs         AuditLog[]
+  user_departments   UserDepartment[]
 
-  @@index([email])
-  @@index([role])
-  @@index([is_active])
+  @@id([user_id, email])
   @@map("users")
 }
 
-model OAuthToken {
-  token_id      Int       @id @default(autoincrement())
-  user_id       Int       @unique
-  google_token  String
-  refresh_token String?
-  expires_at    DateTime?
-
-  user User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-
-  @@map("oauth_tokens")
-}
-
-model Request {
-  request_id  Int      @id @default(autoincrement())
-  email       String   @db.VarChar(255)
-  message     String   @db.Text
-  tracking_id String   @unique @default(cuid())
-  created_at  DateTime @default(now())
-
-  ticket_requests TicketRequest[]
-
-  @@index([email])
-  @@index([tracking_id])
-  @@index([created_at])
-  @@map("requests")
-}
-
-// ===== MAIN TICKET TABLE (CURRENT STATE) =====
-
-model Ticket {
-  ticket_id          Int       @id @default(autoincrement())
-  title              String    @db.VarChar(150)
-  summary            String    @db.Text
-  suggested_solution String?   @db.Text
-  
-  // Current State (Single Source of Truth)
-  status_id          Int?      // Foreign key to TicketStatus (nullable for migration)
-  category_id        Int?      // Foreign key to Category
-  creator_user_id    Int?      // Who submitted (could be Admin creating from request) (nullable for migration)
-  assignee_user_id   Int?      // Currently assigned user (null if unassigned)
-  
-  // Workflow Timestamps
-  created_at         DateTime  @default(now()) // AI draft creation time
-  activated_at       DateTime? // When Admin submitted Draft → New
-  activated_by_id    Int?      // Admin who activated
-  deadline           DateTime? // Set by Admin during draft review
-  resolved_at        DateTime? // When marked Solved/Failed
-  updated_at         DateTime  @updatedAt
-  
-  // Resolution (Required for Solved/Failed)
-  resolution_comment_id Int? // Link to the final resolution comment
-  
-  // Metadata
-  priority           String    @default("Medium") @db.VarChar(10) // Low, Medium, High, Critical
+model Department {
+  department       String           @id
   
   // Relations
-  status             TicketStatus? @relation(fields: [status_id], references: [status_id])
-  category           Category?    @relation(fields: [category_id], references: [category_id])
-  creator            User?        @relation("TicketCreator", fields: [creator_user_id], references: [user_id])
-  assignee           User?        @relation("CurrentAssignee", fields: [assignee_user_id], references: [user_id])
-  activated_by       User?        @relation("TicketActivatedBy", fields: [activated_by_id], references: [user_id])
-  resolution_comment Comment?     @relation("ResolutionComment", fields: [resolution_comment_id], references: [comment_id])
-  
-  // Child Relations
-  comments           Comment[]           @relation("TicketComments")
-  status_history     StatusHistory[]
-  assignment_history AssignmentHistory[]
-  ticket_requests    TicketRequest[]
-  followers          Follower[]
-  notifications      Notification[]
+  user_departments UserDepartment[]
 
-  @@index([status_id])
-  @@index([category_id])
-  @@index([assignee_user_id])
-  @@index([creator_user_id])
-  @@index([activated_at])
-  @@index([deadline])
-  @@index([created_at])
-  @@index([priority])
+  @@map("departments")
+}
+
+model Category {
+  catagory String   @id // Kept spelling from SQL
+  
+  // Relations
+  tickets  Ticket[]
+
+  @@map("categories")
+}
+
+model Ticket {
+  ticket_id          String        @id
+  original_message   String
+  title              String?
+  summary            String?
+  suggested_solution String?
+  category_name      String?       @map("category") // Mapped to column 'category'
+  status             ticket_status @default(Draft)
+  deadline           DateTime?
+  submission_time    DateTime?     @default(now())
+  creator_id         Int?
+  parent_ticket_id   String?
+
+  // Relations
+  category           Category?     @relation(fields: [category_name], references: [catagory])
+  creator            User?         @relation("TicketCreator", fields: [creator_id], references: [user_id])
+  
+  // Self-Relation (Consolidation)
+  parent_ticket      Ticket?       @relation("TicketConsolidation", fields: [parent_ticket_id], references: [ticket_id])
+  child_tickets      Ticket[]      @relation("TicketConsolidation")
+
+  // Junctions & Logs
+  assignments        TicketAssignment[]
+  followers          TicketFollower[]
+  comments           Comment[]
+  audit_logs         AuditLog[]
+
   @@map("tickets")
 }
 
-// ===== AUDIT TRAIL TABLES =====
+// =======================
+// JUNCTION TABLES
+// =======================
 
-model StatusHistory {
-  history_id     Int      @id @default(autoincrement())
-  ticket_id      Int
-  old_status_id  Int?     // Nullable for migration
-  new_status_id  Int?     // Nullable for migration
-  changed_by_id  Int?     // Nullable for migration
-  change_reason  String?  @db.Text // Optional comment explaining the change
-  changed_at     DateTime @default(now())
+model UserDepartment {
+  user_id         Int
+  department_name String
 
-  ticket      Ticket       @relation(fields: [ticket_id], references: [ticket_id], onDelete: Cascade)
-  old_status  TicketStatus? @relation("OldStatus", fields: [old_status_id], references: [status_id])
-  new_status  TicketStatus? @relation("NewStatus", fields: [new_status_id], references: [status_id])
-  changed_by  User?        @relation("StatusChangedBy", fields: [changed_by_id], references: [user_id])
+  user       User       @relation(fields: [user_id], references: [user_id])
+  department Department @relation(fields: [department_name], references: [department])
 
-  @@index([ticket_id])
-  @@index([new_status_id])
-  @@index([changed_at])
-  @@index([changed_by_id])
-  @@map("status_histories")
+  @@id([user_id, department_name])
+  @@map("user_departments")
 }
 
-model AssignmentHistory {
-  assignment_id   Int      @id @default(autoincrement())
-  ticket_id       Int
-  old_assignee_id Int?
-  new_assignee_id Int?
-  changed_by_id   Int
-  change_reason   String?  @db.Text
-  changed_at      DateTime @default(now())
+model TicketAssignment {
+  ticket_id   String
+  assignee_id Int
+  assigned_at DateTime? @default(now())
 
-  ticket       Ticket @relation(fields: [ticket_id], references: [ticket_id], onDelete: Cascade)
-  old_assignee User?  @relation("OldAssignee", fields: [old_assignee_id], references: [user_id], onDelete: SetNull)
-  new_assignee User?  @relation("NewAssignee", fields: [new_assignee_id], references: [user_id], onDelete: SetNull)
-  changed_by   User   @relation("AssignmentChangedBy", fields: [changed_by_id], references: [user_id])
+  ticket   Ticket @relation(fields: [ticket_id], references: [ticket_id])
+  assignee User   @relation(fields: [assignee_id], references: [user_id])
 
-  @@index([ticket_id])
-  @@index([new_assignee_id])
-  @@index([changed_at])
-  @@map("assignment_histories")
+  @@id([ticket_id, assignee_id])
+  @@map("ticket_assignments")
 }
 
-// ===== COLLABORATION =====
+model TicketFollower {
+  ticket_id   String
+  follower_id Int
+
+  ticket   Ticket @relation(fields: [ticket_id], references: [ticket_id])
+  follower User   @relation(fields: [follower_id], references: [user_id])
+
+  @@id([ticket_id, follower_id])
+  @@map("ticket_followers")
+}
+
+// =======================
+// LOGS & COMMENTS
+// =======================
 
 model Comment {
-  comment_id  Int      @id @default(autoincrement())
-  ticket_id   Int
-  user_id     Int
-  content     String   @db.Text
-  visibility  String   @default("PUBLIC") @db.VarChar(10) // PUBLIC, INTERNAL
-  created_at  DateTime @default(now())
+  comment_id Int                @id @default(autoincrement())
+  ticket_id  String?
+  author_id  Int?
+  content    String?
+  visibility comment_visibility @default(Public)
+  created_at DateTime?          @default(now())
 
-  ticket                Ticket   @relation("TicketComments", fields: [ticket_id], references: [ticket_id], onDelete: Cascade)
-  user                  User     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-  resolution_for_ticket Ticket[] @relation("ResolutionComment")
+  ticket Ticket? @relation(fields: [ticket_id], references: [ticket_id])
+  author User?   @relation(fields: [author_id], references: [user_id])
 
-  @@index([ticket_id])
-  @@index([user_id])
-  @@index([created_at])
-  @@index([visibility])
   @@map("comments")
 }
 
-model Follower {
-  follower_id Int      @id @default(autoincrement())
-  ticket_id   Int
-  user_id     Int
-  followed_at DateTime @default(now())
+model AuditLog {
+  log_id      Int       @id @default(autoincrement())
+  ticket_id   String?
+  actor_id    Int?
+  action_type String?
+  old_value   String?
+  new_value   String?
+  occurred_at DateTime? @default(now())
 
-  ticket Ticket @relation(fields: [ticket_id], references: [ticket_id], onDelete: Cascade)
-  user   User   @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  ticket Ticket? @relation(fields: [ticket_id], references: [ticket_id])
+  actor  User?   @relation(fields: [actor_id], references: [user_id])
 
-  @@unique([ticket_id, user_id])
-  @@index([ticket_id])
-  @@index([user_id])
-  @@map("followers")
-}
-
-// ===== LINKING TABLES =====
-
-model TicketRequest {
-  ticket_id  Int
-  request_id Int
-
-  ticket  Ticket  @relation(fields: [ticket_id], references: [ticket_id], onDelete: Cascade)
-  request Request @relation(fields: [request_id], references: [request_id], onDelete: Cascade)
-
-  @@id([ticket_id, request_id])
-  @@index([ticket_id])
-  @@index([request_id])
-  @@map("ticket_requests")
-}
-
-model AssigneeScope {
-  scope_id    Int    @id @default(autoincrement())
-  assignee_id Int
-  scope_name  String @db.VarChar(50) // IT, HR, Finance, etc.
-
-  assignee User @relation(fields: [assignee_id], references: [user_id], onDelete: Cascade)
-
-  @@unique([assignee_id, scope_name])
-  @@index([assignee_id])
-  @@index([scope_name])
-  @@map("assignee_scopes")
-}
-
-// ===== NOTIFICATIONS =====
-
-model Notification {
-  notification_id Int      @id @default(autoincrement())
-  ticket_id       Int
-  user_id         Int
-  type            String   @db.VarChar(30) // submission, status_change, new_comment, assignment
-  message         String   @db.Text
-  is_read         Boolean  @default(false)
-  created_at      DateTime @default(now())
-
-  ticket Ticket @relation(fields: [ticket_id], references: [ticket_id], onDelete: Cascade)
-  user   User   @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-
-  @@index([ticket_id])
-  @@index([user_id])
-  @@index([is_read])
-  @@index([created_at])
-  @@map("notifications")
+  @@map("audit_logs")
 }
