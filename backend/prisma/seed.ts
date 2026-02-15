@@ -9,23 +9,36 @@ async function main() {
   // 1. SETUP LOOKUP DATA
   // ==============================================
   
-  const departments = ['IT', 'HR', 'Finance', 'Legal']
-  for (const dept of departments) {
-    await prisma.department.upsert({
-      where: { department: dept },
+  // Create Ticket Statuses
+  const statuses = [
+    { name: 'Draft', step_order: 1, description: 'AI-generated ticket awaiting admin review' },
+    { name: 'New', step_order: 2, description: 'Ticket submitted and awaiting assignment' },
+    { name: 'Assigned', step_order: 3, description: 'Ticket assigned to an assignee' },
+    { name: 'Solving', step_order: 4, description: 'Assignee is working on the ticket' },
+    { name: 'Solved', step_order: 5, description: 'Ticket has been resolved' },
+    { name: 'Failed', step_order: 6, description: 'Ticket could not be resolved' },
+    { name: 'Renew', step_order: 7, description: 'Ticket reopened after being marked solved/failed' }
+  ]
+  
+  for (const status of statuses) {
+    await prisma.ticketStatus.upsert({
+      where: { name: status.name },
       update: {},
-      create: { department: dept },
+      create: status,
     })
   }
 
+  // Create Categories
   const categories = ['Technical Support', 'Billing', 'Feature Request', 'Access Rights']
   for (const cat of categories) {
     await prisma.category.upsert({
-      where: { catagory: cat },
+      where: { name: cat },
       update: {},
-      create: { catagory: cat },
+      create: { name: cat, sla_hours: 24 },
     })
   }
+
+  console.log('✅ Lookup data created.')
 
   // ==============================================
   // 2. CREATE USERS
@@ -34,8 +47,8 @@ async function main() {
   const admin = await prisma.user.create({
     data: {
       email: 'admin@ceivoice.com',
-      full_name: 'Sarah Connor',
-      role: 'Admin',
+      name: 'Sarah Connor',
+      role: 'ADMIN',
       google_id: 'google_123_admin',
     },
   })
@@ -43,20 +56,20 @@ async function main() {
   const assigneeIT = await prisma.user.create({
     data: {
       email: 'tech_lead@ceivoice.com',
-      full_name: 'Elliot Alderson',
-      role: 'Assignee',
-      user_departments: {
-        create: { department_name: 'IT' }
+      name: 'Elliot Alderson',
+      role: 'ASSIGNEE',
+      scopes: {
+        create: { scope_name: 'IT' }
       }
     },
   })
 
   const user1 = await prisma.user.create({
-    data: { email: 'john.doe@example.com', full_name: 'John Doe', role: 'User' },
+    data: { email: 'john.doe@example.com', name: 'John Doe', role: 'USER' },
   })
   
   const user2 = await prisma.user.create({
-    data: { email: 'jane.smith@example.com', full_name: 'Jane Smith', role: 'User' },
+    data: { email: 'jane.smith@example.com', name: 'Jane Smith', role: 'USER' },
   })
 
   console.log('✅ Users created.')
@@ -65,98 +78,95 @@ async function main() {
   // 3. CREATE TICKETS
   // ==============================================
 
-  // --- Scenario 1: Standard Ticket ---
-  await prisma.ticket.create({
+  // Get status IDs
+  const draftStatus = await prisma.ticketStatus.findUnique({ where: { name: 'Draft' } })
+  const newStatus = await prisma.ticketStatus.findUnique({ where: { name: 'New' } })
+  const assignedStatus = await prisma.ticketStatus.findUnique({ where: { name: 'Assigned' } })
+  const solvingStatus = await prisma.ticketStatus.findUnique({ where: { name: 'Solving' } })
+  
+  // Get category ID
+  const techSupportCategory = await prisma.category.findUnique({ where: { name: 'Technical Support' } })
+
+  // --- Scenario 1: Standard Ticket with Comments ---
+  const ticket1 = await prisma.ticket.create({
     data: {
-      ticket_id: 'TKT-2026-001',
-      original_message: 'My laptop screen keeps flickering.',
       title: 'Laptop Screen Flickering',
       summary: 'Hardware display issues.',
       suggested_solution: 'Update drivers.',
-      category_name: 'Technical Support',
-      status: 'Solving',
-      creator_id: user1.user_id,
-      assignments: {
-        create: { assignee_id: assigneeIT.user_id }
-      },
-      comments: {
-        create: [
-          {
-            author_id: user1.user_id,
-            content: 'It happens mostly when I share my screen.',
-            visibility: 'Public'
-          },
-          {
-            author_id: assigneeIT.user_id,
-            content: 'Checking warranty status.',
-            visibility: 'Internal'
-          }
-        ]
-      }
+      status_id: solvingStatus?.status_id,
+      category_id: techSupportCategory?.category_id,
+      creator_user_id: user1.user_id,
+      assignee_user_id: assigneeIT.user_id,
+      activated_by_id: admin.user_id,
+      activated_at: new Date(),
+      priority: 'Medium',
     },
   })
 
-  // --- Scenario 2: Parent Ticket (Mass Issue) ---
-  const parentTicket = await prisma.ticket.create({
+  // Add comments
+  await prisma.comment.create({
     data: {
-      ticket_id: 'INCIDENT-WIFI-MAIN',
-      original_message: 'Nobody on the 4th floor can connect to WiFi.',
-      title: '4th Floor WiFi Outage',
-      category_name: 'Technical Support',
-      status: 'Assigned',
-      creator_id: admin.user_id,
-      assignments: {
-        create: { assignee_id: assigneeIT.user_id }
-      }
+      ticket_id: ticket1.ticket_id,
+      user_id: user1.user_id,
+      content: 'It happens mostly when I share my screen.',
+      visibility: 'PUBLIC'
     }
   })
 
-  // --- Scenario 3: Merged Child Tickets ---
-  
-  // Create Child Ticket 1
+  await prisma.comment.create({
+    data: {
+      ticket_id: ticket1.ticket_id,
+      user_id: assigneeIT.user_id,
+      content: 'Checking warranty status.',
+      visibility: 'INTERNAL'
+    }
+  })
+
+  // --- Scenario 2: Assigned Ticket ---
+  const ticket2 = await prisma.ticket.create({
+    data: {
+      title: 'Network Connectivity Issues',
+      summary: 'User cannot connect to WiFi network.',
+      suggested_solution: 'Check network settings and credentials.',
+      status_id: assignedStatus?.status_id,
+      category_id: techSupportCategory?.category_id,
+      creator_user_id: user2.user_id,
+      assignee_user_id: assigneeIT.user_id,
+      activated_by_id: admin.user_id,
+      activated_at: new Date(),
+      priority: 'High',
+    }
+  })
+
+  // --- Scenario 3: Draft Ticket ---
   await prisma.ticket.create({
     data: {
-      ticket_id: 'TKT-WIFI-002',
-      original_message: 'Internet is down on my phone.',
-      title: 'Internet Issues',
-      category_name: 'Technical Support',
-      status: 'Draft',
-      creator_id: user1.user_id,
-      parent_ticket_id: parentTicket.ticket_id, // Link to Parent
+      title: 'Unable to Access Email',
+      summary: 'User reporting email access problems.',
+      suggested_solution: 'Reset password and verify account status.',
+      status_id: draftStatus?.status_id,
+      category_id: techSupportCategory?.category_id,
+      creator_user_id: user1.user_id,
+      priority: 'Low',
     }
   })
 
-  // MANUALLY Add User 1 as a follower of the PARENT ticket
-  // We do this separately to avoid the nesting conflict
-  await prisma.ticketFollower.create({
+  // Add followers
+  await prisma.follower.create({
     data: {
-      ticket_id: parentTicket.ticket_id, // The Parent Ticket
-      follower_id: user1.user_id         // The User who submitted the child ticket
+      ticket_id: ticket1.ticket_id,
+      user_id: user1.user_id
     }
   })
 
-  // Create Child Ticket 2
-  await prisma.ticket.create({
+  await prisma.follower.create({
     data: {
-      ticket_id: 'TKT-WIFI-003',
-      original_message: 'Cannot connect to CEI-Guest network.',
-      title: 'Network Error',
-      category_name: 'Technical Support',
-      status: 'Draft',
-      creator_id: user2.user_id,
-      parent_ticket_id: parentTicket.ticket_id,
+      ticket_id: ticket2.ticket_id,
+      user_id: user2.user_id
     }
   })
 
-  // MANUALLY Add User 2 as a follower of the PARENT ticket
-  await prisma.ticketFollower.create({
-    data: {
-      ticket_id: parentTicket.ticket_id,
-      follower_id: user2.user_id
-    }
-  })
-
-  console.log('✅ Tickets (including Mass Issue Merge) created.')
+  console.log('✅ Tickets created.')
 }
 
 main()
