@@ -2,6 +2,10 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+export const db = prisma; 
+// This allows other files to access db.category, db.user, etc. directly.
+
+
 // ===== TICKET SERVICE =====
 
 export const createTicket = async (
@@ -729,4 +733,11 @@ export const getAssigneeResolvedByCategory = async (
   );
 
   return enriched;
+};
+
+export const getAllActiveCategories = async () => {
+  return await prisma.category.findMany({
+    where: { is_active: true },
+    select: { name: true, category_id: true }
+  });
 };
