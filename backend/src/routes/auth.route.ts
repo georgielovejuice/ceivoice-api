@@ -54,36 +54,38 @@ router.get(
 /**
  * GET /api/auth/google/callback
  * Google OAuth callback
- * Redirects back to client with tokens
+ * Redirects to the Next.js /callback route which sets httpOnly cookies.
+ * Tokens are passed as query params only for this one-time server-to-server
+ * redirect — they are never stored in browser history because the /callback
+ * route immediately sets httpOnly cookies and redirects to /auth-success.
  */
 router.get(
   "/google/callback",
   passport.authenticate("google", {
     session: false,
-    failureRedirect: "/login"
+    failureRedirect: `${config.api.frontendUrl}/login?error=auth_failed`
   }),
   (req, res) => {
-    // On success, user is in req.user
-    if (req.user) {
-      const user = req.user as any;
-
-      // Generate tokens
-      const payload = {
-        user_id: user.user_id,
-        email: user.email,
-        role: user.role
-      };
-
-      const accessToken = authService.generateAccessToken(payload);
-      const refreshToken = authService.generateRefreshToken(payload);
-
-      // Redirect to frontend with tokens
-      res.redirect(
-        `${config.api.frontendUrl}/auth-success?accessToken=${accessToken}&refreshToken=${refreshToken}`
-      );
-    } else {
-      res.redirect(`${config.api.frontendUrl}/login?error=auth_failed`);
+    if (!req.user) {
+      return res.redirect(`${config.api.frontendUrl}/login?error=auth_failed`);
     }
+
+    const user = req.user as any;
+
+    const payload = {
+      user_id: user.user_id,
+      email: user.email,
+      role: user.role
+    };
+
+    const accessToken = authService.generateAccessToken(payload);
+    const refreshToken = authService.generateRefreshToken(payload);
+
+    // Redirect to Next.js /callback — it will store tokens in httpOnly cookies
+    // and then redirect to /auth-success (no tokens in the final URL).
+    return res.redirect(
+      `${config.api.frontendUrl}/callback?access_token=${accessToken}&refresh_token=${refreshToken}`
+    );
   }
 );
 
