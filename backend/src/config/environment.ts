@@ -38,6 +38,19 @@ export const config = {
     bcryptRounds: 10,
     passwordMinLength: 6,
     devMode: process.env.AUTH_MODE === "DEV"
+  },
+
+  // Email Configuration (Resend)
+  email: {
+    resendApiKey: process.env.RESEND_API_KEY || "",
+    fromEmail: process.env.FROM_EMAIL || "noreply@ceivoice.com",
+    frontendUrl: process.env.FRONTEND_URL || "http://localhost:3000"
+  },
+
+  // RabbitMQ Configuration
+  rabbitmq: {
+    url: process.env.RABBITMQ_URL || "amqp://localhost:5672",
+    enabled: process.env.RABBITMQ_ENABLED === "true" || process.env.NODE_ENV === "production"
   }
 };
 

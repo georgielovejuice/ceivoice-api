@@ -1,63 +1,84 @@
-```markdown
 # Changelog
 
 All notable changes to this project are documented here.
 
+## [2.1.0] - February 11, 2026
+
+### Email System Implementation
+- Integrated Resend API for professional email delivery
+- Implemented React Email for component-based email templates
+- Added RabbitMQ integration for asynchronous email processing
+- Created 4 email templates: Confirmation, Status Change, Comment Notification, Assignment
+- Implemented email worker service for background processing
+- Added email queue management with auto-requeue
+
+### TypeScript Configuration
+- Added JSX support to tsconfig.json for React Email templates
+- Improved type definitions for queue service
+- Fixed implicit any type issues
+
+### Bug Fixes
+- Fixed pnpm lockfile version configuration warnings
+- Resolved TypeScript compilation errors with email templates
+- Corrected type definitions in RabbitMQ integration
+
+### Documentation Updates
+- Consolidated documentation into 2 comprehensive guides
+- Updated all documentation to follow professional standards
+- Removed deprecated email-specific guides
+- Updated SETUP_AND_INSTALLATION.md with complete setup instructions
+- Updated IMPLEMENTATION_DETAILS.md with technical architecture
+
 ## [2.0.0] - February 10, 2026
 
-### Major Updates
-
-#### Authentication System Overhaul
-- Integrated **Passport.js** for production-grade authentication
-- Implemented **JWT Bearer tokens** with access/refresh token strategy
-- Added **Google OAuth 2.0** authentication with account linking
-- Implemented **bcryptjs** password hashing (10 salt rounds)
+### Authentication System
+- Integrated Passport.js for production-grade authentication
+- Implemented JWT Bearer token authentication
+- Added Google OAuth 2.0 integration
+- Implemented bcryptjs password hashing (10 salt rounds)
 - Token strategy: 7-day access tokens, 30-day refresh tokens
 
-#### New Files Created
-- `src/config/environment.ts` - Centralized configuration management
-- `src/config/passport.ts` - Passport strategies (JWT, Local, Google)
-- Updated `src/services/auth.service.ts` - New token & auth methods
-- Updated `src/middlewares/auth.middleware.ts` - Passport middleware
-- Updated `src/controllers/auth.controller.ts` - New endpoints
-- Updated `src/routes/auth.route.ts` - Refactored routes
-- Updated `src/app.ts` - Passport initialization
+### New Files
+- src/config/environment.ts - Centralized configuration
+- src/config/passport.ts - Passport authentication strategies
+- src/services/email.service.ts - Email delivery service
+- src/services/queue.service.ts - RabbitMQ integration
+- src/templates/ - React Email components
 
-#### API Improvements
-- New endpoint: `POST /api/auth/refresh` - Token refresh
-- New endpoint: `GET /api/auth/google` - Google OAuth initiation
-- New endpoint: `GET /api/auth/google/callback` - OAuth callback
-- Updated endpoint: `POST /api/auth/login` - Returns access + refresh tokens
-- Updated endpoint: `POST /api/auth/register` - Returns access + refresh tokens
-- Backward compatible with existing endpoints
+### API Endpoints
+- POST /api/auth/register - User registration
+- POST /api/auth/login - User authentication
+- POST /api/auth/refresh - Token refresh
+- GET /api/auth/me - Get user profile
+- GET /api/auth/google - Google OAuth initiation
+- GET /api/auth/google/callback - OAuth callback handler
 
-#### Documentation
-- Created `docs/` structure with organized documentation
-- Created `docs/api/README.md` - Concise project overview (clean format)
-- Created `docs/QUICK_REFERENCE.md` - Auth quick reference guide
-- Created `docs/testing/` - Testing documentation
-- Consolidated documentation (removed redundant files)
+### Database
+- PostgreSQL with Prisma ORM
+- 12+ tables for comprehensive data modeling
+- Automated migration system
 
-### Security Enhancements
-- Production-grade token validation with issuer/audience claims
+### Documentation
+- docs/api/README.md - API reference
+- docs/QUICK_REFERENCE.md - Authentication reference
+- docs/testing/ - Testing documentation
+- docs/STATUS.md - Project status
+
+### Security
+- Token validation with issuer/audience claims
 - Role-based access control (ADMIN, ASSIGNEE, USER)
 - Standard Bearer token authentication
-- HTTPS ready with CORS configuration
-- Environment-based configuration management
+- CORS configuration support
+- Environment-based secret management
 
-### Backward Compatibility
-- All existing endpoints remain functional
-- Tracking token functionality preserved
-- User management utilities available
-- Database schema unchanged
-- No migrations required for existing data
+## [1.0.0] - Initial Release
 
-### Documentation Restructure
-**Organized into docs/ folder:**
-- `docs/api/README.md` - Main API reference
-- `docs/QUICK_REFERENCE.md` - Auth quick lookup
-- `docs/testing/` - Testing guides and scripts
-- `docs/CHANGELOG.md` - This file
+### Core Features
+- Express.js server setup
+- Basic routing structure
+- Database schema with Prisma
+- User management
+- Ticket management foundation
 - `docs/STATUS.md` - Project status
 
 **Removed redundant files:**

@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import type { UserProfile } from "../config/passport";
 import * as dbService from "../services/db.service";
 import * as emailService from "../services/email.service";
 
@@ -9,7 +10,7 @@ export const listDrafts = async (
   res: Response
 ): Promise<void> => {
   try {
-    if (!req.user || req.user.role !== "ADMIN") {
+    if (!req.user || (req.user as UserProfile).role !== "ADMIN") {
       res.status(403).json({ error: "Forbidden - Admin access required" });
       return;
     }
@@ -27,7 +28,7 @@ export const updateDraft = async (
   res: Response
 ): Promise<void> => {
   try {
-    if (!req.user || req.user.role !== "ADMIN") {
+    if (!req.user || (req.user as UserProfile).role !== "ADMIN") {
       res.status(403).json({ error: "Forbidden - Admin access required" });
       return;
     }
@@ -43,7 +44,7 @@ export const updateDraft = async (
       return;
     }
 
-    if (ticket.status !== "Draft") {
+    if (ticket.status_id !== 1) { // 1 = Draft
       res.status(400).json({ error: "Only draft tickets can be updated" });
       return;
     }
@@ -87,7 +88,7 @@ export const approveDraft = async (
   res: Response
 ): Promise<void> => {
   try {
-    if (!req.user || req.user.role !== "ADMIN") {
+    if (!req.user || (req.user as UserProfile).role !== "ADMIN") {
       res.status(403).json({ error: "Forbidden - Admin access required" });
       return;
     }
@@ -101,21 +102,24 @@ export const approveDraft = async (
       return;
     }
 
-    if (ticket.status !== "Draft") {
+    if (ticket.status_id !== 1) { // 1 = Draft
       res.status(400).json({ error: "Only draft tickets can be approved" });
       return;
     }
 
-    // Update status to "New"
-    const oldStatus = ticket.status;
-    await dbService.updateTicket(ticketId, { status: "New" });
+    // Get the status IDs for Draft (1) and New (2)
+    const draftStatusId = 1;
+    const newStatusId = 2;
+
+    // Update status to New (2)
+    await dbService.updateTicket(ticketId, { status_id: newStatusId });
 
     // Record status history
     await dbService.createStatusHistory(
       ticketId,
-      oldStatus,
-      "New",
-      req.user.user_id
+      draftStatusId,
+      newStatusId,
+      (req.user as UserProfile).user_id
     );
 
     // Send notification emails to associated users
@@ -150,12 +154,12 @@ export const listActiveTickets = async (
   res: Response
 ): Promise<void> => {
   try {
-    if (!req.user || req.user.role !== "ADMIN") {
+    if (!req.user || (req.user as UserProfile).role !== "ADMIN") {
       res.status(403).json({ error: "Forbidden - Admin access required" });
       return;
     }
 
-    const tickets = await dbService.getTicketsByStatus("New");
+    const tickets = await dbService.getTicketsByStatus(2); // 2 = New
     res.json(tickets);
   } catch (err) {
     console.error(err);
@@ -170,7 +174,7 @@ export const assignTicketToUser = async (
   res: Response
 ): Promise<void> => {
   try {
-    if (!req.user || req.user.role !== "ADMIN") {
+    if (!req.user || (req.user as UserProfile).role !== "ADMIN") {
       res.status(403).json({ error: "Forbidden - Admin access required" });
       return;
     }
@@ -189,17 +193,19 @@ export const assignTicketToUser = async (
       return;
     }
 
-    const oldAssigneeId = ticket.assignments[0]?.assignee_id || null;
+    const oldAssigneeId = ticket.assignee_user_id || null;
     await dbService.assignTicket(ticketId, assignee_id);
     await dbService.createAssignmentHistory(
       ticketId,
       oldAssigneeId,
-      assignee_id
+      assignee_id,
+      (req.user as UserProfile).user_id
     );
 
     // Update status if not already assigned
-    if (ticket.status === "New") {
-      await dbService.updateTicket(ticketId, { status: "Assigned" });
+    const assignedStatusId = 3; // 3 = Assigned
+    if (ticket.status_id === 2) { // If status is New (2)
+      await dbService.updateTicket(ticketId, { status_id: assignedStatusId });
     }
 
     res.json({ message: "Ticket assigned successfully" });
@@ -215,7 +221,7 @@ export const getAssigneeList = async (
   res: Response
 ): Promise<void> => {
   try {
-    if (!req.user || req.user.role !== "ADMIN") {
+    if (!req.user || (req.user as UserProfile).role !== "ADMIN") {
       res.status(403).json({ error: "Forbidden - Admin access required" });
       return;
     }
@@ -235,7 +241,7 @@ export const getTicketStats = async (
   res: Response
 ): Promise<void> => {
   try {
-    if (!req.user || req.user.role !== "ADMIN") {
+    if (!req.user || (req.user as UserProfile).role !== "ADMIN") {
       res.status(403).json({ error: "Forbidden - Admin access required" });
       return;
     }
@@ -268,7 +274,7 @@ export const getUserNotifications = async (
     }
 
     const notifications = await dbService.getUserNotifications(
-      req.user.user_id
+      (req.user as UserProfile).user_id
     );
     res.json(notifications);
   } catch (err) {

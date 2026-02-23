@@ -1,64 +1,206 @@
-````markdown
-# Passport.js Authentication - Quick Reference
-
-## Files Created/Modified
-
-### Created Files
-- ✅ `src/config/environment.ts` - Configuration management
-- ✅ `src/config/passport.ts` - Passport strategies
-- ✅ `docs/QUICK_REFERENCE.md` - Full documentation
-- ✅ `docs/api/README.md` - Implementation summary
-
-### Modified Files
-- ✅ `src/app.ts` - Passport initialization
-- ✅ `src/services/auth.service.ts` - New auth methods
-- ✅ `src/middlewares/auth.middleware.ts` - Passport middleware
-- ✅ `src/controllers/auth.controller.ts` - New endpoints
-- ✅ `src/routes/auth.route.ts` - Updated routes
-- ✅ `.env.example` - Updated configuration template
+# Authentication Quick Reference
 
 ## API Endpoints
 
-### Public Endpoints
+### Authentication Endpoints
 
-| Method | Endpoint | Body | Returns |
-|--------|----------|------|---------|
-| POST | `/api/auth/register` | email, password, confirmPassword, fullName | accessToken, refreshToken, user |
-| POST | `/api/auth/login` | email, password | accessToken, refreshToken, user |
-| POST | `/api/auth/refresh` | refreshToken | accessToken, user |
-| GET | `/api/auth/google` | - | Redirect to Google |
-| GET | `/api/auth/google/callback` | - | Redirect with user data |
+| Method | Endpoint | Description | Authentication |
+|--------|----------|-------------|-----------------|
+| POST | `/api/auth/register` | User registration | None |
+| POST | `/api/auth/login` | User login | None |
+| POST | `/api/auth/refresh` | Refresh access token | None (requires refresh token) |
+| GET | `/api/auth/me` | Get current user profile | Required |
+| GET | `/api/auth/google` | Initiate Google OAuth flow | None |
+| GET | `/api/auth/google/callback` | Google OAuth callback | None |
 
-### Protected Endpoints (Require: `Authorization: Bearer <token>`)
+### Request/Response Examples
 
-| Method | Endpoint | Returns | Notes |
-|--------|----------|---------|-------|
-| GET | `/api/auth/me` | user profile | Requires valid access token |
-| POST | `/api/auth/logout` | success message | Optional - client-side logout |
+#### Registration
 
-## Using in Routes
+Request:
+```bash
+curl -X POST http://localhost:5000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "securePassword123",
+    "confirmPassword": "securePassword123",
+    "fullName": "John Doe"
+  }'
+```
 
-### Example: Protected Route
+Response:
+```json
+{
+  "status": "success",
+  "data": {
+    "user": {
+      "user_id": "123",
+      "email": "user@example.com",
+      "fullName": "John Doe",
+      "role": "USER"
+    },
+    "accessToken": "eyJhbGc...",
+    "refreshToken": "eyJhbGc..."
+  }
+}
+```
+
+#### Login
+
+Request:
+```bash
+curl -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "securePassword123"
+  }'
+```
+
+Response:
+```json
+{
+  "status": "success",
+  "data": {
+    "user": {
+      "user_id": "123",
+      "email": "user@example.com",
+      "fullName": "John Doe",
+      "role": "USER"
+    },
+    "accessToken": "eyJhbGc...",
+    "refreshToken": "eyJhbGc..."
+  }
+}
+```
+
+#### Get Current User
+
+Request:
+```bash
+curl -X GET http://localhost:5000/api/auth/me \
+  -H "Authorization: Bearer <accessToken>"
+```
+
+Response:
+```json
+{
+  "status": "success",
+  "data": {
+    "user_id": "123",
+    "email": "user@example.com",
+    "fullName": "John Doe",
+    "role": "USER"
+  }
+}
+```
+
+#### Refresh Token
+
+Request:
+```bash
+curl -X POST http://localhost:5000/api/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{
+    "refreshToken": "<refreshToken>"
+  }'
+```
+
+Response:
+```json
+{
+  "status": "success",
+  "data": {
+    "accessToken": "eyJhbGc...",
+    "user": {
+      "user_id": "123",
+      "email": "user@example.com",
+      "role": "USER"
+    }
+  }
+}
+```
+
+## Protected Endpoints
+
+All protected endpoints require an `Authorization` header with a valid access token:
+
+```bash
+Authorization: Bearer <accessToken>
+```
+
+Example:
+```bash
+curl -X GET http://localhost:5000/api/protected-endpoint \
+  -H "Authorization: Bearer eyJhbGc..."
+```
+
+## Token Management
+
+### Token Structure
+
+Access Token:
+- Expiration: 7 days
+- Type: JWT (JSON Web Token)
+- Format: `Bearer <token>`
+
+Refresh Token:
+- Expiration: 30 days
+- Type: JWT (JSON Web Token)
+- Used to obtain new access tokens
+
+### Token Refresh Flow
+
+1. User logs in and receives both access and refresh tokens
+2. Access token is used for API requests
+3. When access token expires, use refresh token to get a new access token
+4. If refresh token expires, user must log in again
+
+Example:
+```bash
+# Initial login
+curl -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com", "password": "password123"}'
+
+# Response includes accessToken and refreshToken
+# Use accessToken for requests
+curl -X GET http://localhost:5000/api/auth/me \
+  -H "Authorization: Bearer <accessToken>"
+
+# When accessToken expires, refresh it
+curl -X POST http://localhost:5000/api/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{"refreshToken": "<refreshToken>"}'
+```
+
+## Authentication in Code
+
+### Using in Express Routes
+
 ```typescript
 import { Router } from "express";
 import { authenticate, authorize } from "../middlewares/auth.middleware";
-import * as controller from "../controllers/mycontroller";
 
 const router = Router();
 
-// Require authentication
-router.get("/my-data", authenticate, controller.getMyData);
+// Route requiring authentication
+router.get("/protected", authenticate, (req, res) => {
+  res.json({ user: req.user });
+});
 
-// Require specific role
-router.delete("/user/:id", authenticate, authorize(["ADMIN"]), controller.deleteUser);
-
-// Admin only
-router.post("/admin-action", authenticate, requireAdmin, controller.adminAction);
+// Route requiring specific role
+router.delete("/user/:id", authenticate, authorize(["ADMIN"]), (req, res) => {
+  // Only ADMIN role can access
+  res.json({ success: true });
+});
 
 export default router;
 ```
 
 ### Accessing User in Controller
+
 ```typescript
 export const myHandler = async (req: Request, res: Response) => {
   // User info available after authenticate middleware
@@ -66,18 +208,73 @@ export const myHandler = async (req: Request, res: Response) => {
   const email = (req.user as any).email;
   const role = (req.user as any).role;
   
-  // Your code here
+  // Use user information in logic
+  res.json({ userId, email, role });
 };
 ```
 
-## Token Usage
+### Client-Side Token Storage
 
-### Client-Side Storage (JavaScript)
 ```javascript
 // After login/register
-const { accessToken, refreshToken } = response;
+const { accessToken, refreshToken } = response.data;
 
-// Store tokens
+// Store tokens in localStorage (or sessionStorage)
+localStorage.setItem("accessToken", accessToken);
+localStorage.setItem("refreshToken", refreshToken);
+
+// Use token in requests
+const response = await fetch("/api/protected", {
+  headers: {
+    "Authorization": `Bearer ${localStorage.getItem("accessToken")}`
+  }
+});
+
+// On token expiration, refresh it
+const newTokens = await fetch("/api/auth/refresh", {
+  method: "POST",
+  body: JSON.stringify({
+    refreshToken: localStorage.getItem("refreshToken")
+  })
+});
+
+// Update stored tokens
+localStorage.setItem("accessToken", newTokens.accessToken);
+```
+
+## User Roles
+
+The application supports three user roles:
+
+| Role | Permissions | Description |
+|------|-------------|-------------|
+| USER | Read own data, create requests | Standard user |
+| ASSIGNEE | Manage tickets | Support staff |
+| ADMIN | Full access | Administrator |
+
+## Common Errors
+
+| Status | Error | Cause | Solution |
+|--------|-------|-------|----------|
+| 400 | Invalid credentials | Wrong email/password | Verify credentials |
+| 401 | Unauthorized | Missing/invalid token | Include valid auth token |
+| 403 | Forbidden | Insufficient permissions | Use account with proper role |
+| 422 | Validation error | Invalid request data | Check request format |
+| 500 | Server error | Unexpected error | Check server logs |
+
+## Environment Variables
+
+For authentication to work, configure these variables:
+
+```env
+JWT_SECRET=your-secret-key-minimum-32-characters
+PASSPORT_SECRET=your-passport-secret
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+GOOGLE_CALLBACK_URL=http://localhost:5000/api/auth/google/callback
+```
+
+See `.env.example` for all available options.
 localStorage.setItem('accessToken', accessToken);
 localStorage.setItem('refreshToken', refreshToken);
 
@@ -216,5 +413,3 @@ curl -X POST http://localhost:5000/api/auth/refresh \
 ---
 
 For detailed information, see [api/README.md](api/README.md)
-
-````

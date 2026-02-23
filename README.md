@@ -1,111 +1,193 @@
-# CeiVoice API
+# CeiVoice Complete API
 
-Production-ready ticket management system with Passport.js authentication, JWT tokens, and Google OAuth.
+A comprehensive ticket management and request handling system with AI-powered draft generation capabilities.
 
-## Quick Start
+## Overview
 
-```bash
-cd backend
-npm install
-cp .env.example .env
-npm run prisma:migrate
-npm run dev
-```
-
-Server runs on `http://localhost:5000`
-
-## Features
-
-- Email/password and Google OAuth authentication
-- JWT-based token management (7-day access, 30-day refresh)
-- Ticket lifecycle management with approval workflows
-- Role-based access control (USER, ASSIGNEE, ADMIN)
-- Request tracking with auto-ticketing
-- Internal and public comments
-- Email notifications
-- PostgreSQL with Prisma ORM
-
-## Stack
-
-- **Backend**: Express.js 5.x, TypeScript
-- **Auth**: Passport.js, JWT, bcryptjs
-- **Database**: PostgreSQL, Prisma ORM
-- **Email**: Nodemailer
-- **Dev Tools**: ts-node, nodemon
-
-## API Endpoints
-
-| Method | Endpoint | Purpose |
-|--------|----------|---------|
-| POST | /api/auth/register | Create user |
-| POST | /api/auth/login | Authenticate |
-| POST | /api/auth/refresh | Refresh token |
-| GET | /api/auth/me | Get profile |
-| GET | /api/auth/google | Google OAuth |
-| POST | /api/requests | Submit request |
-| GET | /api/tickets | List tickets |
-| POST | /api/admin/drafts/:id/approve | Approve ticket |
-
-See [docs/QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md) for full endpoint list.
-
-## Configuration
-
-Required environment variables:
-
-```env
-DATABASE_URL=postgresql://user:pass@host/db
-JWT_SECRET=your-secret-key-min-32-chars
-GOOGLE_CLIENT_ID=your-client-id
-GOOGLE_CLIENT_SECRET=your-client-secret
-```
-
-See `backend/.env.example` for all options.
-
-## Development
-
-```bash
-npm run dev          # Start with hot reload
-npm run build        # Build for production
-npm run prisma:migrate  # Run migrations
-npm run prisma:studio   # Database GUI
-```
+CeiVoice Complete API is a backend service that processes user requests, generates AI-assisted ticket drafts, and manages ticket lifecycle with full audit trail capabilities.
 
 ## Project Structure
 
 ```
-backend/
-├── src/
-│   ├── config/          # Passport & environment config
-│   ├── controllers/     # Request handlers
-│   ├── services/        # Business logic
-│   ├── middlewares/     # Auth & custom middleware
-│   ├── routes/          # API endpoints
-│   ├── app.ts          # Express setup
-│   └── server.ts       # Entry point
-├── prisma/
-│   ├── schema.prisma   # Database schema
-│   └── migrations/     # DB migrations
-└── package.json
+ceivoice-api/
+├── backend/                           # TypeScript backend (primary)
+│   ├── src/
+│   │   ├── config/                    # Configuration files
+│   │   ├── controllers/               # Request handlers
+│   │   ├── middleware/                # Custom middleware
+│   │   ├── models/                    # Data models
+│   │   ├── routes/                    # API route definitions
+│   │   ├── services/                  # Business logic services
+│   │   ├── utils/                     # Utility functions
+│   │   └── index.ts                   # Application entry point
+│   ├── prisma/                        # Prisma ORM files
+│   │   ├── schema.prisma              # Database schema definition
+│   │   └── migrations/                # Database migration history
+│   ├── tests/                         # Test files
+│   ├── package.json                   # Dependencies and scripts
+│   ├── tsconfig.json                  # TypeScript configuration
+│   └── .env.example                   # Environment variables template
+│
+├── backend-expressjs/                 # Express.js implementation
+│   ├── src/
+│   │   ├── controllers/               # Request handlers
+│   │   │   ├── requestController.js   # Request processing logic
+│   │   │   └── ticketController.js    # Ticket management logic
+│   │   ├── routes/                    # API route definitions
+│   │   │   ├── requestRoutes.js       # Request endpoints
+│   │   │   └── ticketRoutes.js        # Ticket endpoints
+│   │   ├── services/                  # Business logic services
+│   │   │   ├── draftService.js        # AI draft generation
+│   │   │   ├── requestService.js      # Request processing
+│   │   │   └── ticketService.js       # Ticket operations
+│   │   ├── app.js                     # Express application setup
+│   │   └── server.js                  # Server entry point
+│   ├── prisma/                        # Database schema and migrations
+│   │   ├── schema.prisma              # Prisma schema
+│   │   └── migrations/                # Migration files
+│   ├── package.json                   # Dependencies and scripts
+│   └── .env.example                   # Environment variables template
+│
+├── docker/                            # Docker configuration
+│   ├── Dockerfile                     # Docker image definition
+│   ├── docker-compose.yml             # Development compose file
+│   ├── docker-compose.prod.yml        # Production compose file
+│   └── .dockerignore                  # Docker ignore patterns
+│
+├── docs/                              # Project documentation
+│   ├── api/                           # API documentation
+│   │   ├── requests.md                # Request endpoints docs
+│   │   └── tickets.md                 # Ticket endpoints docs
+│   ├── deployment/                    # Deployment guides
+│   │   ├── docker.md                  # Docker deployment guide
+│   │   └── production.md              # Production setup guide
+│   ├── IMPLEMENTATION_DETAILS.md      # Technical implementation details
+│   ├── QUICK_REFERENCE.md             # Quick reference guide
+│   ├── CHANGELOG.md                   # Version history
+│   └── STATUS.md                      # Project status
+│
+├── scripts/                           # Utility scripts
+│   ├── seed.js                        # Database seeding script
+│   ├── migrate.sh                     # Migration helper
+│   └── test.sh                        # Test runner
+│
+├── postman/                           # API testing
+│   └── CeiVoice-Complete-API.postman_collection.json
+│
+├── .gitignore                         # Git ignore patterns
+├── .env.example                       # Root environment template
+├── package.json                       # Root package configuration
+├── pnpm-workspace.yaml                # PNPM workspace configuration
+└── README.md                          # This file
 ```
 
-## Documentation
+## Features
 
-- [docs/api/README.md](docs/api/README.md) - API overview
-- [docs/QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md) - API reference
-- [docs/testing/AUTH_TESTING_GUIDE.md](docs/testing/AUTH_TESTING_GUIDE.md) - Testing guide
-- [docs/STATUS.md](docs/STATUS.md) - Project status
-- [docs/CHANGELOG.md](docs/CHANGELOG.md) - Version history
+- **Request Management**: Submit and process user requests via email and message
+- **AI-Powered Drafting**: Automatic generation of ticket titles, summaries, and suggested solutions
+- **Ticket Lifecycle**: Complete ticket status management with audit history
+- **Status Tracking**: Full audit trail of status changes with user attribution
+- **RESTful API**: Clean and structured API endpoints
+
+## Technology Stack
+
+- **Runtime**: Node.js
+- **Framework**: Express.js
+- **Database ORM**: Prisma
+- **API Testing**: Postman (collection included)
+- **Containerization**: Docker & Docker Compose
+
+## API Endpoints
+
+### Requests
+- `POST /api/requests` - Submit a new request
+
+### Tickets
+- `POST /api/tickets/:id/status` - Update ticket status
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js (v14 or higher)
+- pnpm (recommended) or npm
+- Docker and Docker Compose (optional)
+
+### Installation
+
+1. Clone the repository
+2. Navigate to the backend directory:
+   ```bash
+   cd backend-expressjs
+   ```
+
+3. Install dependencies:
+   ```bash
+   pnpm install
+   ```
+
+4. Configure environment variables:
+   ```bash
+   cp .env.example .env
+   ```
+
+5. Run database migrations:
+   ```bash
+   npx prisma migrate dev
+   ```
+
+6. Start the development server:
+   ```bash
+   pnpm dev
+   ```
+
+The server will start on port 5000 (configurable via PORT environment variable).
+
+### Docker Deployment
+
+For production deployment using Docker:
+
+```bash
+docker-compose -f docker/docker-compose.prod.yml up -d
+```
 
 ## Testing
 
-```bash
-# Interactive testing guide
-bash TEST_AUTH_QUICK_START.sh
+Import the included Postman collection (`CeiVoice-Complete-API.postman_collection.json`) to test all available endpoints.
 
-# Automated test suite
-bash backend/test-auth-flows.sh
+## Documentation
 
-# Manual testing instructions
-cat backend/AUTH_TESTING_GUIDE.md
+Additional documentation is available in the `docs/` directory:
+
+- [Implementation Details](docs/IMPLEMENTATION_DETAILS.md)
+- [Quick Reference](docs/QUICK_REFERENCE.md)
+- [API Documentation](docs/api/)
+- [Deployment Guide](docs/deployment/)
+- [Changelog](docs/CHANGELOG.md)
+- [Status](docs/STATUS.md)
+
+## Database Schema
+
+The application uses Prisma ORM with the following main models:
+
+- **Request**: Raw user requests with email and message
+- **Ticket**: Generated tickets with AI-drafted content
+- **TicketRequest**: Links requests to their corresponding tickets
+- **StatusHistory**: Audit trail for ticket status changes
+
+## Environment Variables
+
+Configure the following variables in your `.env` file:
+
+- `PORT`: Server port (default: 5000)
+- `DATABASE_URL`: Prisma database connection string
+- Additional variables as specified in `.env.example`
+
+## License
+
+Internal use only.
+
+## Support
+
+For questions or issues, please refer to the documentation or contact the development team.
 ```
-

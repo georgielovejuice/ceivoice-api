@@ -131,7 +131,7 @@ export const me = async (req: Request, res: Response): Promise<void> => {
       email: user.email,
       name: user.name,
       role: user.role,
-      is_assignee: user.is_assignee,
+      is_assignee: user.role === "ASSIGNEE" || user.role === "ADMIN",
       created_at: user.created_at
     });
   } catch (err) {

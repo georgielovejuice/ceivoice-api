@@ -1,4 +1,3 @@
-````markdown
 # Authentication Flows Testing Guide
 
 ## Overview
@@ -10,21 +9,19 @@ This document provides step-by-step instructions to test all authentication flow
 - Backend database configured and connected
 - JWT secret configured in `.env`
 
-## 1. Start the Server
+## Starting the Server
 
 ```bash
 cd backend
-npm install
+pnpm install
 cp .env.example .env
 # Edit .env with your actual credentials
-npm run dev
+pnpm run dev
 ```
 
 The server should start on `http://localhost:5000`.
 
----
-
-## TEST 1: User Registration
+## Test 1: User Registration
 
 ### Objective
 Register a new user with email and password, receive access and refresh tokens.
@@ -100,7 +97,7 @@ Expected: `400 Bad Request` with error about password mismatch.
 
 ---
 
-## TEST 2: User Login
+## Test 2: User Login
 
 ### Objective
 Login with registered email and password, receive new tokens.
@@ -168,7 +165,7 @@ Expected: `401 Unauthorized` with message "User not found" or "Invalid credentia
 
 ---
 
-## TEST 3: Get User Profile (Protected Route)
+## Test 3: Get User Profile (Protected Route)
 
 ### Objective
 Access protected endpoint using Bearer token authentication.
@@ -224,7 +221,7 @@ Expected: `401 Unauthorized` with message "Token expired".
 
 ---
 
-## TEST 4: Token Refresh
+## Test 4: Token Refresh
 
 ### Objective
 Use refresh token to get a new access token without re-authenticating.
@@ -294,7 +291,7 @@ Expected: `401 Unauthorized` with message "Refresh token expired".
 
 ---
 
-## TEST 5: JWT Token Claims Verification
+## Test 5: JWT Token Claims Verification
 
 ### Objective
 Verify that JWT tokens contain the correct claims.
@@ -346,7 +343,7 @@ Go to [jwt.io](https://jwt.io) and paste the token in the "Encoded" section.
 
 ---
 
-## TEST 6: Google OAuth Flow
+## Test 6: Google OAuth Flow
 
 ### Objective
 Test Google OAuth 2.0 authentication flow (initiation and callback).
@@ -410,7 +407,7 @@ The OAuth callback is handled automatically. You should receive:
 
 ---
 
-## TEST 7: Token Validation with Different Scenarios
+## Test 7: Token Validation with Different Scenarios
 
 ### Scenario 1: Modified Token
 
@@ -436,7 +433,7 @@ Expected: `401 Unauthorized` if issuer doesn't match.
 
 ---
 
-## TEST 8: Logout (If Implemented)
+## Test 8: Logout (If Implemented)
 
 ### Command
 
@@ -503,7 +500,7 @@ Create a test results file with the following template:
 | CORS error | Frontend on different port | Check CORS_ORIGIN in .env |
 | 401 Unauthorized | Invalid/missing token | Ensure token is included and valid |
 | Token expired | Token older than 7 days | Use refresh endpoint to get new token |
-| Connection refused | Server not listening | Start server with `npm run dev` |
+| Connection refused | Server not listening | Start server with `pnpm run dev` |
 
 ---
 
@@ -519,4 +516,3 @@ After successful testing:
 6. **Implement 2FA** for additional security
 
 
-````

@@ -163,8 +163,7 @@ passport.use(
             user = await prisma.user.update({
               where: { email: profile.emails?.[0]?.value },
               data: {
-                google_id: profile.id,
-                google_email: profile.emails?.[0]?.value
+                google_id: profile.id
               }
             });
           } else {
@@ -174,7 +173,6 @@ passport.use(
                 email: profile.emails?.[0]?.value || "",
                 name: profile.displayName || null,
                 google_id: profile.id,
-                google_email: profile.emails?.[0]?.value || "",
                 role: "USER"
               }
             });
