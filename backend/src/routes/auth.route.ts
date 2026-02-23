@@ -32,7 +32,10 @@ function createSupabaseClient(req: Request, res: Response) {
   return createServerClient(config.supabase.url, config.supabase.anonKey, {
     cookies: {
       getAll() {
-        return parseCookieHeader(req.headers.cookie ?? "");
+        return parseCookieHeader(req.headers.cookie ?? "").map(({ name, value }) => ({
+          name,
+          value: value ?? ""
+        }));
       },
       setAll(cookiesToSet) {
         cookiesToSet.forEach(({ name, value, options }) => {
