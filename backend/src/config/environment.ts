@@ -38,7 +38,7 @@ export const config = {
   // Auth Configuration
   auth: {
     bcryptRounds: 10,
-    passwordMinLength: 6,
+    passwordMinLength: 8,
     devMode: process.env.AUTH_MODE === "DEV"
   },
 
