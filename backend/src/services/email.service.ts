@@ -7,7 +7,9 @@ import { CommentNotificationEmail } from "../templates/CommentNotificationEmail"
 import { AssignmentNotificationEmail } from "../templates/AssignmentNotificationEmail";
 import { queueService, EmailQueuePayload } from "./queue.service";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = process.env.RESEND_API_KEY
+  ? new Resend(process.env.RESEND_API_KEY)
+  : null;
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 const FROM_EMAIL = process.env.FROM_EMAIL || "noreply@ceivoice.com";
@@ -49,6 +51,11 @@ export const sendConfirmationEmail = async (
         frontendUrl: FRONTEND_URL,
       })
     );
+
+    if (!resend) {
+      console.error("Resend client is not initialized. Check RESEND_API_KEY.");
+      return false;
+    }
 
     const response = await resend.emails.send({
       from: FROM_EMAIL,
@@ -98,6 +105,11 @@ export const sendStatusChangeEmail = async (
       })
     );
 
+    if (!resend) {
+      console.error("Resend client is not initialized. Check RESEND_API_KEY.");
+      return false;
+    }
+
     const response = await resend.emails.send({
       from: FROM_EMAIL,
       to: email,
@@ -146,6 +158,11 @@ export const sendCommentNotificationEmail = async (
       })
     );
 
+    if (!resend) {
+      console.error("Resend client is not initialized. Check RESEND_API_KEY.");
+      return false;
+    }
+
     const response = await resend.emails.send({
       from: FROM_EMAIL,
       to: email,
@@ -192,6 +209,11 @@ export const sendAssignmentNotificationEmail = async (
         assigneeName,
       })
     );
+
+    if (!resend) {
+      console.error("Resend client is not initialized. Check RESEND_API_KEY.");
+      return false;
+    }
 
     const response = await resend.emails.send({
       from: FROM_EMAIL,

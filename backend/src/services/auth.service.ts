@@ -1,16 +1,13 @@
 /**
  * Authentication Service
- * Production-grade auth utilities with Passport.js integration
- * - Token management (generation, verification, refresh)
- * - Password hashing with bcrypt
- * - User registration and validation
+ * Auth utilities: token management, password hashing, registration/login.
  */
 
 import { PrismaClient } from "@prisma/client";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import config from "../config/environment";
-import { JwtPayload, UserProfile } from "../config/passport";
+import { JwtPayload, UserProfile } from "../config/supabase";
 
 const prisma = new PrismaClient();
 
@@ -119,7 +116,7 @@ export const verifyToken = (token: string): JwtPayload | null => {
     const decoded = jwt.verify(token, config.jwt.secret as any, {
       issuer: config.jwt.issuer,
       audience: config.jwt.audience,
-      algorithms: config.passport.algorithms as any
+      algorithms: config.jwtAlgorithms as any
     }) as unknown as JwtPayload;
     return decoded;
   } catch (error) {
@@ -138,7 +135,7 @@ export const verifyTrackingToken = (
 ): TrackingTokenPayload | null => {
   try {
     const decoded = jwt.verify(token, config.jwt.secret as any, {
-      algorithms: config.passport.algorithms as any
+      algorithms: config.jwtAlgorithms as any
     }) as unknown as TrackingTokenPayload;
     return decoded;
   } catch (error) {

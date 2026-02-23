@@ -1,63 +1,124 @@
 /**
  * Authentication Middleware
- * Passport.js integration for route protection
- * - JWT Bearer token validation
+ * Supabase + JWT-based route protection (no Passport.js)
+ * - JWT Bearer token validation via jsonwebtoken
  * - Role-based authorization
  * - Optional authentication
  */
 
 import { Request, Response, NextFunction } from "express";
-import passport from "passport";
-import type { UserProfile } from "../config/passport";
+import { PrismaClient } from "@prisma/client";
+import type { UserProfile } from "../config/supabase";
+import { verifyToken } from "../services/auth.service";
+
+const prisma = new PrismaClient();
+
+// ===== HELPERS =====
+
+/** Extract Bearer token from the Authorization header, or return null. */
+function extractBearerToken(req: Request): string | null {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith("Bearer ")) return null;
+  const token = header.slice(7).trim();
+  return token || null;
+}
 
 // ===== JWT AUTHENTICATION MIDDLEWARE =====
 
 /**
- * Authenticate using JWT Bearer token
+ * Authenticate using JWT Bearer token.
  * Expected header: Authorization: Bearer <token>
- * Requires valid JWT token in Authorization header
+ *
+ * Verifies the token cryptographically, then confirms the user still exists
+ * in the database (so deactivated accounts cannot use old tokens).
  */
-export const authenticate = (req: any, res: Response, next: NextFunction): void => {
-  passport.authenticate("jwt", { session: false }, (err: any, user: UserProfile | false, info: any) => {
-    if (err) {
-      return res.status(500).json({ error: "Authentication error" });
-    }
+export const authenticate = async (
+  req: any,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  const token = extractBearerToken(req);
+
+  if (!token) {
+    res.status(401).json({ error: "Unauthorized", message: "Missing token" });
+    return;
+  }
+
+  const payload = verifyToken(token);
+
+  if (!payload) {
+    res.status(401).json({ error: "Unauthorized", message: "Invalid or expired token" });
+    return;
+  }
+
+  try {
+    const user = await prisma.user.findUnique({ where: { user_id: payload.user_id } });
 
     if (!user) {
-      return res.status(401).json({
-        error: "Unauthorized",
-        message: info?.message || "Invalid or missing token"
-      });
+      res.status(401).json({ error: "Unauthorized", message: "User not found" });
+      return;
     }
 
-    // Attach user to request
-    req.user = user;
+    const userProfile: UserProfile = {
+      user_id: user.user_id,
+      email: user.email,
+      name: user.name,
+      role: user.role
+    };
+
+    req.user = userProfile;
     req.userId = user.user_id;
     req.email = user.email;
 
     next();
-  })(req, res, next);
+  } catch (err) {
+    console.error("Auth middleware DB error:", err);
+    res.status(500).json({ error: "Authentication error" });
+  }
 };
 
 /**
- * Optional JWT authentication
- * Attaches user if valid token provided, otherwise continues
+ * Optional JWT authentication.
+ * Attaches the user if a valid token is provided; otherwise continues.
  */
-export const authenticateOptional = (req: any, res: Response, next: NextFunction): void => {
-  passport.authenticate("jwt", { session: false }, (err: any, user: UserProfile | false) => {
-    if (err) {
-      console.error("Optional auth error:", err);
-      return next();
-    }
+export const authenticateOptional = async (
+  req: any,
+  _res: Response,
+  next: NextFunction
+): Promise<void> => {
+  const token = extractBearerToken(req);
+
+  if (!token) {
+    next();
+    return;
+  }
+
+  const payload = verifyToken(token);
+
+  if (!payload) {
+    next();
+    return;
+  }
+
+  try {
+    const user = await prisma.user.findUnique({ where: { user_id: payload.user_id } });
 
     if (user) {
-      req.user = user;
+      const userProfile: UserProfile = {
+        user_id: user.user_id,
+        email: user.email,
+        name: user.name,
+        role: user.role
+      };
+      req.user = userProfile;
       req.userId = user.user_id;
       req.email = user.email;
     }
+  } catch (err) {
+    console.error("Optional auth middleware DB error:", err);
+  }
 
-    next();
-  })(req, res, next);
+  next();
 };
 
 // ===== AUTHORIZATION MIDDLEWARE =====
@@ -66,7 +127,7 @@ export const authenticateOptional = (req: any, res: Response, next: NextFunction
  * Role-based authorization
  * Restricts access to specified roles
  * Must be used after authenticate middleware
- * 
+ *
  * Example: authorize(["ADMIN", "ASSIGNEE"])
  */
 export const authorize = (allowedRoles: string[]) => {

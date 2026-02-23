@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import type { UserProfile } from "../config/passport";
+import type { UserProfile } from "../config/supabase";
 import * as dbService from "../services/db.service";
 
 // ===== ADMIN REPORTING =====
@@ -203,8 +203,8 @@ export const getAssigneePerformance = async (
       performance: {
         total_solved: totalSolved,
         total_failed: totalFailed,
-        success_rate: totalSolved + totalFailed > 0 
-          ? ((totalSolved / (totalSolved + totalFailed)) * 100).toFixed(2) + "%" 
+        success_rate: totalSolved + totalFailed > 0
+          ? ((totalSolved / (totalSolved + totalFailed)) * 100).toFixed(2) + "%"
           : "N/A",
         avg_resolution_time_hours: avgResolutionTime,
         resolved_by_category: resolvedByCategory

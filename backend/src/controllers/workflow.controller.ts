@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import type { UserProfile } from "../config/passport";
+import type { UserProfile } from "../config/supabase";
 import * as dbService from "../services/db.service";
 import * as emailService from "../services/email.service";
 
@@ -27,17 +27,17 @@ export const activateDraft = async (
     }
 
     if (ticket.status_id !== 1) { // 1 = Draft
-      res.status(400).json({ 
+      res.status(400).json({
         error: "Only Draft tickets can be activated",
-        current_status_id: ticket.status_id 
+        current_status_id: ticket.status_id
       });
       return;
     }
 
     // Validate required fields before activation
     if (!ticket.title || !ticket.summary) {
-      res.status(400).json({ 
-        error: "Ticket must have title and summary before activation" 
+      res.status(400).json({
+        error: "Ticket must have title and summary before activation"
       });
       return;
     }
@@ -108,15 +108,15 @@ export const resolveTicket = async (
 
     // Validate inputs
     if (!resolution_status || !["Solved", "Failed"].includes(resolution_status)) {
-      res.status(400).json({ 
-        error: "resolution_status must be 'Solved' or 'Failed'" 
+      res.status(400).json({
+        error: "resolution_status must be 'Solved' or 'Failed'"
       });
       return;
     }
 
     if (!resolution_comment || resolution_comment.trim().length === 0) {
-      res.status(400).json({ 
-        error: "resolution_comment is required when resolving a ticket" 
+      res.status(400).json({
+        error: "resolution_comment is required when resolving a ticket"
       });
       return;
     }
@@ -130,9 +130,9 @@ export const resolveTicket = async (
 
     // Prevent re-resolving already resolved tickets
     if ([5, 6].includes(ticket.status_id || 0)) { // 5 = Solved, 6 = Failed
-      res.status(400).json({ 
+      res.status(400).json({
         error: "Ticket is already resolved",
-        current_status_id: ticket.status_id 
+        current_status_id: ticket.status_id
       });
       return;
     }
@@ -221,9 +221,9 @@ export const renewTicket = async (
 
     // Only allow renewal of resolved tickets
     if (![5, 6].includes(ticket.status_id || 0)) { // 5 = Solved, 6 = Failed
-      res.status(400).json({ 
+      res.status(400).json({
         error: "Only Solved or Failed tickets can be renewed",
-        current_status_id: ticket.status_id 
+        current_status_id: ticket.status_id
       });
       return;
     }

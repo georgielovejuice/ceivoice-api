@@ -1,9 +1,5 @@
 import express, { Express } from "express";
 import cors from "cors";
-import passport from "passport";
-
-// Import Passport configuration
-import "./config/passport";
 
 import authRoutes from "./routes/auth.route";
 import ticketRoutes from "./routes/ticket.route";
@@ -29,10 +25,6 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ===== PASSPORT.JS INITIALIZATION =====
-app.use(passport.initialize());
-// Note: passport.session() not used since we're using stateless JWT auth
-
 // ===== ROUTES =====
 app.use("/api/auth", authRoutes);
 app.use("/api/requests", requestRoutes);
@@ -52,7 +44,7 @@ app.get("/", (_req, res) => {
     name: "CeiVoice API Backend",
     version: "2.0.0",
     status: "running",
-    authentication: "Passport.js with JWT",
+    authentication: "Supabase OAuth + JWT",
     endpoints: {
       auth: "/api/auth",
       tickets: "/api/tickets",

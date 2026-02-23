@@ -13,17 +13,19 @@ export const config = {
     audience: "ceivoice-clients"
   },
 
-  // Passport Configuration
-  passport: {
-    jwtFromRequest: "authorization", // Authorization header with Bearer scheme
-    algorithms: ["HS256"]
-  },
+  // JWT algorithm list (used when verifying tokens)
+  jwtAlgorithms: ["HS256"] as string[],
 
-  // Google OAuth Configuration
-  google: {
-    clientID: process.env.GOOGLE_CLIENT_ID || "",
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-    callbackURL: process.env.GOOGLE_REDIRECT_URI_OAUTH || "http://localhost:5000/api/auth/google/callback"
+  // Supabase Configuration (OAuth server)
+  supabase: {
+    url: process.env.SUPABASE_URL || "",
+    anonKey: process.env.SUPABASE_ANON_KEY || "",
+    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || "",
+    // The URL Supabase will redirect to after the Google OAuth dance.
+    // Must be registered in your Supabase project → Auth → URL Configuration.
+    callbackURL:
+      process.env.SUPABASE_OAUTH_CALLBACK_URL ||
+      "http://localhost:5000/api/auth/google/callback"
   },
 
   // API Configuration

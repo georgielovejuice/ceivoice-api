@@ -1,5 +1,5 @@
  import { Request, Response } from "express";
-import type { UserProfile } from "../config/passport";
+import type { UserProfile } from "../config/supabase";
 import * as dbService from "../services/db.service";
 import * as emailService from "../services/email.service";
 

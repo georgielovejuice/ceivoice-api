@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import * as dbService from "../services/db.service";
-import type { UserProfile } from "../config/passport";
+import type { UserProfile } from "../config/supabase";
 import * as emailService from "../services/email.service";
 import { aiService } from "../services/ai.service";
 import * as validator from "email-validator";
@@ -174,7 +174,7 @@ export const getAllRequests = async (req: Request, res: Response): Promise<void>
           res.status(403).json({ error: "Forbidden - Admin access required" });
           return;
         }
-    
+
         const { page = 1, limit = 20 } = req.query;
         // Note: Pagination would require additional implementation in the db service
         res.json({
@@ -192,21 +192,21 @@ export const verifyTrackingToken = async (req: Request, res: Response): Promise<
     // ... (Your existing code)
     try {
         const { token } = req.body;
-    
+
         if (!token) {
           res.status(400).json({ error: "Token is required" });
           return;
         }
-    
+
         // Import here to avoid circular dependency
         const { verifyTrackingToken } = await import("../services/auth.service");
         const decoded = verifyTrackingToken(token);
-    
+
         if (!decoded) {
           res.status(401).json({ error: "Invalid or expired tracking token" });
           return;
         }
-    
+
         res.json({
           valid: true,
           email: decoded.email,
