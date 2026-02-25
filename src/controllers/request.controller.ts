@@ -3,7 +3,6 @@ import * as dbService from "../services/db.service";
 import type { UserProfile } from "../config/supabase";
 import * as emailService from "../services/email.service";
 import { aiService } from "../services/ai.service";
-import * as validator from "email-validator";
 
 // ===== SUBMIT REQUEST =====
 
@@ -12,14 +11,17 @@ export const submitRequest = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const { email, message } = req.body;
-
-    // Validation
-    if (!email || !validator.validate(email)) {
-      res.status(400).json({ error: "Invalid email format" });
+    // Get authenticated user from JWT
+    if (!req.user) {
+      res.status(401).json({ error: "Unauthorized" });
       return;
     }
 
+    const userId = (req.user as UserProfile).user_id;
+    const userEmail = (req.user as UserProfile).email;
+    const { message } = req.body;
+
+    // Validation
     if (!message || message.trim().length === 0) {
       res.status(400).json({ error: "Message cannot be empty" });
       return;
@@ -30,8 +32,8 @@ export const submitRequest = async (
       return;
     }
 
-    // 1. Create the Raw Request first
-    const request = await dbService.createRequest(email, message);
+    // 1. Create the Raw Request with authenticated user email
+    const request = await dbService.createRequest(userEmail, message);
 
     // 2. Prepare Context for AI
     const allCategories = await dbService.getAllActiveCategories();
@@ -53,12 +55,12 @@ export const submitRequest = async (
       selectedCategoryId = defaultCategory.category_id;
     }
 
-    // 5. Create the Ticket Draft
+    // 5. Create the Ticket Draft with authenticated user as creator
     const ticket = await dbService.createTicket(
       aiDraft.title,
       aiDraft.summary,
       selectedCategoryId,
-      1, // Creator: System User
+      userId, // Creator: Authenticated user
     );
 
     // 6. Update Ticket with AI specifics
@@ -77,7 +79,7 @@ export const submitRequest = async (
 
     // Send confirmation email
     emailService
-      .sendConfirmationEmail(email, request.tracking_id, ticket.ticket_id)
+      .sendConfirmationEmail(userEmail, request.tracking_id, ticket.ticket_id)
       .catch((err) => {
         console.error("Failed to send confirmation email:", err);
       });

@@ -965,7 +965,7 @@
       "name": "📋 Requests",
       "item": [
         {
-          "name": "Submit Request (Public)",
+          "name": "Submit Request (Authenticated)",
           "event": [
             {
               "listen": "test",
@@ -987,13 +987,17 @@
             "method": "POST",
             "header": [
               {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
                 "key": "Content-Type",
                 "value": "application/json"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Customer Support Request\",\n  \"description\": \"I need help with my account setup\",\n  \"email\": \"customer@example.com\",\n  \"category\": \"Support\"\n}"
+              "raw": "{\n  \"message\": \"I cannot login to my dashboard after password reset. Please help me regain access.\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/requests",
