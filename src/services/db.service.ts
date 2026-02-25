@@ -741,3 +741,25 @@ export const getAllActiveCategories = async () => {
     select: { name: true, category_id: true }
   });
 };
+
+// ===== MERGE/UNMERGE SERVICE =====
+
+export const mergeTickets = async (parentTicketId: number, childTicketIds: number[]) => {
+  const merged = await Promise.all(
+    childTicketIds.map((childId) =>
+      prisma.ticket.update({
+        where: { ticket_id: childId },
+        data: { parent_ticket_id: parentTicketId }
+      })
+    )
+  );
+
+  return merged;
+};
+
+export const unmergeTicket = async (childTicketId: number) => {
+  return await prisma.ticket.update({
+    where: { ticket_id: childTicketId },
+    data: { parent_ticket_id: null }
+  });
+};

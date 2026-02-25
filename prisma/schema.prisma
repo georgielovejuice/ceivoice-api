@@ -96,6 +96,7 @@ model Ticket {
   category_id           Int?
   creator_user_id       Int?
   assignee_user_id      Int?
+  parent_ticket_id      Int?
   created_at            DateTime            @default(now())
   activated_at          DateTime?
   activated_by_id       Int?
@@ -116,6 +117,8 @@ model Ticket {
   creator               User?               @relation("TicketCreator", fields: [creator_user_id], references: [user_id])
   resolution_comment    Comment?            @relation("ResolutionComment", fields: [resolution_comment_id], references: [comment_id])
   status                TicketStatus?       @relation(fields: [status_id], references: [status_id])
+  parent_ticket         Ticket?             @relation("MergedTickets", fields: [parent_ticket_id], references: [ticket_id], onDelete: SetNull)
+  child_tickets         Ticket[]            @relation("MergedTickets")
 
   @@index([status_id])
   @@index([category_id])
@@ -125,6 +128,7 @@ model Ticket {
   @@index([deadline])
   @@index([created_at])
   @@index([priority])
+  @@index([parent_ticket_id])
   @@map("tickets")
 }
 

@@ -26,4 +26,8 @@ router.get("/stats", adminController.getTicketStats);
 router.get("/notifications", adminController.getUserNotifications);
 router.put("/notifications/:id/read", adminController.markNotificationAsRead);
 
+// Merge/Unmerge
+router.post("/:id/merge", adminController.mergeTickets);
+router.post("/:id/unmerge", adminController.unmergeTicket);
+
 export default router;

@@ -304,3 +304,77 @@ export const markNotificationAsRead = async (
     res.status(500).json({ error: error.message });
   }
 };
+// ===== MERGE/UNMERGE TICKETS =====
+
+export const mergeTickets = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    if (!req.user || (req.user as UserProfile).role !== "ADMIN") {
+      res.status(403).json({ error: "Forbidden - Admin access required" });
+      return;
+    }
+
+    const parentTicketId = parseInt(req.params.id, 10);
+    const { child_ticket_ids } = req.body;
+
+    if (!Array.isArray(child_ticket_ids) || child_ticket_ids.length === 0) {
+      res.status(400).json({ error: "child_ticket_ids must be a non-empty array" });
+      return;
+    }
+
+    // Get parent ticket
+    const parentTicket = await dbService.getTicketById(parentTicketId);
+    if (!parentTicket) {
+      res.status(404).json({ error: "Parent ticket not found" });
+      return;
+    }
+
+    // Merge child tickets
+    const merged = await dbService.mergeTickets(parentTicketId, child_ticket_ids);
+
+    res.json({
+      message: "Tickets merged successfully",
+      parent_ticket_id: parentTicketId,
+      merged_child_count: merged.length
+    });
+  } catch (err) {
+    const error = err as Error;
+    console.error(err);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const unmergeTicket = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    if (!req.user || (req.user as UserProfile).role !== "ADMIN") {
+      res.status(403).json({ error: "Forbidden - Admin access required" });
+      return;
+    }
+
+    const childTicketId = parseInt(req.params.id, 10);
+
+    // Get child ticket
+    const childTicket = await dbService.getTicketById(childTicketId);
+    if (!childTicket || !childTicket.parent_ticket_id) {
+      res.status(404).json({ error: "Ticket is not a merged child" });
+      return;
+    }
+
+    // Unmerge
+    await dbService.unmergeTicket(childTicketId);
+
+    res.json({
+      message: "Ticket unmerged successfully",
+      ticket_id: childTicketId
+    });
+  } catch (err) {
+    const error = err as Error;
+    console.error(err);
+    res.status(500).json({ error: error.message });
+  }
+};

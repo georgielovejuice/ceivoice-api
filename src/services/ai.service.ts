@@ -89,7 +89,7 @@ export class AiService {
       };
 
     } catch (error) {
-      console.error("❌ AI Service Error:", error);
+      console.error("AI Service Error:", error);
       return {
         title: "New Support Request",
         category: availableCategories[0] || "Uncategorized",
