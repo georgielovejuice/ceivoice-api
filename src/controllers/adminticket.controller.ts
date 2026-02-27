@@ -122,6 +122,25 @@ export const approveDraft = async (
       (req.user as UserProfile).user_id
     );
 
+    // Auto-add request creators as followers (EP03-ST006)
+    if (ticket.ticket_requests && ticket.ticket_requests.length > 0) {
+      for (const tr of ticket.ticket_requests) {
+        const request = tr.request;
+        if (request && request.email) {
+          try {
+            // Find user by email and add as follower
+            const user = await dbService.getUserByEmail(request.email);
+            if (user) {
+              await dbService.addFollower(ticketId, user.user_id);
+            }
+          } catch (err) {
+            console.warn(`Failed to add follower for ${request.email}:`, err);
+            // Continue - follower not critical, email notification is primary
+          }
+        }
+      }
+    }
+
     // Send notification emails to associated users
     if (ticket.ticket_requests.length > 0) {
       const request = ticket.ticket_requests[0]?.request;

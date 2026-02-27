@@ -281,6 +281,13 @@ export const getFollowers = async (ticketId: number) => {
   });
 };
 
+// Get user by email (for following request creators)
+export const getUserByEmail = async (email: string) => {
+  return await prisma.user.findUnique({
+    where: { email }
+  });
+};
+
 // ===== NOTIFICATION SERVICE =====
 
 export const createNotification = async (
