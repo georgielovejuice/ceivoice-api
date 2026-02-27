@@ -295,6 +295,14 @@ export const getUserById = async (userId: number) => {
   });
 };
 
+// Update user role (for admin role management)
+export const updateUserRole = async (userId: number, role: string) => {
+  return await prisma.user.update({
+    where: { user_id: userId },
+    data: { role }
+  });
+};
+
 // ===== NOTIFICATION SERVICE =====
 
 export const createNotification = async (

@@ -397,3 +397,56 @@ export const unmergeTicket = async (
     res.status(500).json({ error: error.message });
   }
 };
+
+// ===== USER ROLE MANAGEMENT =====
+
+export const updateUserRole = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    if (!req.user || (req.user as UserProfile).role !== "ADMIN") {
+      res.status(403).json({ error: "Forbidden - Admin access required" });
+      return;
+    }
+
+    const userId = parseInt(req.params.userId, 10);
+    const { role } = req.body;
+
+    if (!role) {
+      res.status(400).json({ error: "Role is required" });
+      return;
+    }
+
+    // Validate role value
+    const validRoles = ["ADMIN", "ASSIGNEE", "USER"];
+    if (!validRoles.includes(role)) {
+      res.status(400).json({
+        error: `Invalid role. Must be one of: ${validRoles.join(", ")}`
+      });
+      return;
+    }
+
+    // Get user and verify exists
+    const user = await dbService.getUserById(userId);
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    // Update user role (EP06-ST001)
+    const updatedUser = await dbService.updateUserRole(userId, role);
+
+    res.json({
+      message: "User role updated successfully",
+      user_id: updatedUser.user_id,
+      email: updatedUser.email,
+      name: updatedUser.name,
+      role: updatedUser.role
+    });
+  } catch (err) {
+    const error = err as Error;
+    console.error(err);
+    res.status(500).json({ error: error.message });
+  }
+};

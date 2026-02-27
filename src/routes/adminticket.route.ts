@@ -30,4 +30,7 @@ router.put("/notifications/:id/read", adminController.markNotificationAsRead);
 router.post("/:id/merge", adminController.mergeTickets);
 router.post("/:id/unmerge", adminController.unmergeTicket);
 
+// User role management (EP06-ST001)
+router.patch("/users/:userId/role", adminController.updateUserRole);
+
 export default router;
