@@ -412,6 +412,31 @@ export const addComment = async (
       is_internal || false
     );
 
+    // Send email notification if comment is PUBLIC (EP01-ST005)
+    if (!is_internal) {
+      try {
+        const ticket = await dbService.getTicketById(ticketId);
+        const commenterEmail = (req.user as UserProfile).email || "Support Team";
+        
+        if (ticket && ticket.ticket_requests && ticket.ticket_requests.length > 0) {
+          const request = ticket.ticket_requests[0]?.request;
+          if (request) {
+            await emailService.sendCommentNotificationEmail(
+              request.email,
+              ticketId,
+              commenterEmail,
+              request.tracking_id
+            ).catch((err) => {
+              console.warn("Failed to send comment notification email:", err);
+            });
+          }
+        }
+      } catch (err) {
+        console.warn("Error processing comment notification:", err);
+        // Don't fail the main request - comment is already saved
+      }
+    }
+
     res.status(201).json({
       message: "Comment added successfully",
       comment
