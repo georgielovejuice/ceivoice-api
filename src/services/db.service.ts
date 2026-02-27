@@ -360,6 +360,12 @@ export const removeScope = async (assigneeId: number, scopeName: string) => {
   });
 };
 
+export const removeScopeById = async (scopeId: number) => {
+  return await prisma.assigneeScope.delete({
+    where: { scope_id: scopeId }
+  });
+};;
+
 // ===== OAUTH SERVICE =====
 
 export const saveOAuthToken = async (

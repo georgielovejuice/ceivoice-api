@@ -450,3 +450,116 @@ export const updateUserRole = async (
     res.status(500).json({ error: error.message });
   }
 };
+
+// ===== ASSIGNEE SCOPE MANAGEMENT =====
+
+export const getAssigneeScopes = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    if (!req.user || (req.user as UserProfile).role !== "ADMIN") {
+      res.status(403).json({ error: "Forbidden - Admin access required" });
+      return;
+    }
+
+    const assigneeId = parseInt(req.params.assigneeId, 10);
+
+    // Verify assignee exists
+    const assignee = await dbService.getUserById(assigneeId);
+    if (!assignee) {
+      res.status(404).json({ error: "Assignee not found" });
+      return;
+    }
+
+    // Get all scopes for assignee (EP06-ST002)
+    const scopes = await dbService.getAssigneeScopes(assigneeId);
+
+    res.json({
+      message: "Assignee scopes retrieved successfully",
+      assignee_id: assigneeId,
+      scopes: scopes
+    });
+  } catch (err) {
+    const error = err as Error;
+    console.error(err);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const addAssigneeScope = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    if (!req.user || (req.user as UserProfile).role !== "ADMIN") {
+      res.status(403).json({ error: "Forbidden - Admin access required" });
+      return;
+    }
+
+    const assigneeId = parseInt(req.params.assigneeId, 10);
+    const { scope_name } = req.body;
+
+    if (!scope_name) {
+      res.status(400).json({ error: "scope_name is required" });
+      return;
+    }
+
+    // Validate scope_name
+    if (typeof scope_name !== "string" || scope_name.trim().length === 0) {
+      res.status(400).json({ error: "scope_name must be a non-empty string" });
+      return;
+    }
+
+    // Verify assignee exists
+    const assignee = await dbService.getUserById(assigneeId);
+    if (!assignee) {
+      res.status(404).json({ error: "Assignee not found" });
+      return;
+    }
+
+    // Add scope to assignee (EP06-ST002)
+    const scope = await dbService.assignScope(assigneeId, scope_name.trim());
+
+    res.status(201).json({
+      message: "Scope added to assignee successfully",
+      scope: scope
+    });
+  } catch (err) {
+    const error = err as Error;
+    console.error(err);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const removeAssigneeScope = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    if (!req.user || (req.user as UserProfile).role !== "ADMIN") {
+      res.status(403).json({ error: "Forbidden - Admin access required" });
+      return;
+    }
+
+    const scopeId = parseInt(req.params.scopeId, 10);
+
+    // Remove scope (EP06-ST002)
+    await dbService.removeScopeById(scopeId);
+
+    res.json({
+      message: "Scope removed successfully",
+      scope_id: scopeId
+    });
+  } catch (err) {
+    const error = err as Error;
+    console.error(err);
+    
+    // Handle "not found" error
+    if (error.message && error.message.includes("not found")) {
+      res.status(404).json({ error: "Scope not found" });
+    } else {
+      res.status(500).json({ error: error.message });
+    }
+  }
+};
