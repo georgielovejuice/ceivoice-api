@@ -363,6 +363,22 @@ export const assignTicket = async (
     // Update ticket status to Assigned (status_id: 3)
     await dbService.updateTicket(ticketId, { status_id: 3 });
 
+    // Send reassignment notification email (EP04-ST004/ST005)
+    try {
+      const assignee = await dbService.getUserById(assignee_id);
+      if (assignee && assignee.email) {
+        await emailService.sendAssignmentNotificationEmail(
+          assignee.email,
+          ticketId,
+          ticket.title || `Ticket #${ticketId}`,
+          assignee.name || "Support Team"
+        );
+      }
+    } catch (err) {
+      console.warn("Failed to send reassignment notification email:", err);
+      // Don't fail the main request - assignment is already done
+    }
+
     res.json({ message: "Ticket assigned successfully" });
   } catch (err) {
     console.error(err);

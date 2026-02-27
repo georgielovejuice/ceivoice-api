@@ -288,6 +288,13 @@ export const getUserByEmail = async (email: string) => {
   });
 };
 
+// Get user by ID (for reassignment notifications)
+export const getUserById = async (userId: number) => {
+  return await prisma.user.findUnique({
+    where: { user_id: userId }
+  });
+};
+
 // ===== NOTIFICATION SERVICE =====
 
 export const createNotification = async (
