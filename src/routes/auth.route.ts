@@ -1,15 +1,3 @@
-/**
- * Authentication Routes
- * API endpoints for authentication.
- *
- * Google OAuth is now handled by Supabase (PKCE flow):
- *   GET /api/auth/google          → redirect the browser to Supabase's OAuth URL
- *   GET /api/auth/google/callback → Supabase redirects here after Google auth;
- *                                   exchange the one-time code for a session,
- *                                   upsert the user in our DB, then issue our
- *                                   own JWTs and redirect to the frontend.
- */
-
 import { Router } from "express";
 import { PrismaClient } from "@prisma/client";
 import { createServerClient, parseCookieHeader, serializeCookieHeader } from "@supabase/ssr";
@@ -22,12 +10,7 @@ import config from "../config/environment";
 const router = Router();
 const prisma = new PrismaClient();
 
-// ===== SUPABASE SERVER CLIENT FACTORY =====
-/**
- * Creates a per-request Supabase client that reads/writes cookies.
- * This is required for the server-side PKCE flow — Supabase stores the
- * code_verifier in a cookie between the initiation and callback steps.
- */
+
 function createSupabaseClient(req: Request, res: Response) {
   return createServerClient(config.supabase.url, config.supabase.anonKey, {
     cookies: {
