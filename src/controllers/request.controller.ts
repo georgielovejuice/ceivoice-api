@@ -4,9 +4,11 @@ import type { UserProfile } from "../types";
 import * as emailService from "../services/email.service";
 import { aiService } from "../services/ai.service";
 import * as validator from "email-validator";
+import jwt from "jsonwebtoken";
+import config from "../config/environment";
 
-// ===== SUBMIT REQUEST =====
-
+// ===== SUBMIT REQUEST (PUBLIC — no auth required) =====
+// This is the anonymous submission form endpoint
 export const submitRequest = async (
   req: Request,
   res: Response,
@@ -14,36 +16,27 @@ export const submitRequest = async (
   try {
     const { email, message } = req.body;
 
-    // Validation
     if (!email || !validator.validate(email)) {
       res.status(400).json({ error: "Invalid email format" });
       return;
     }
-
     if (!message || message.trim().length === 0) {
       res.status(400).json({ error: "Message cannot be empty" });
       return;
     }
-
     if (message.length > 5000) {
       res.status(400).json({ error: "Message is too long (max 5000 characters)" });
       return;
     }
 
-    // 1. Create the Raw Request first
     const request = await dbService.createRequest(email, message);
 
-    // 2. Prepare Context for AI
     const allCategories = await dbService.getAllActiveCategories();
     const categoryNames = allCategories.map((c) => c.name);
-
-    // NEW: Get Agents for AI to choose from
     const allAgents = await dbService.getAllAssignees();
 
-    // 3. Generate Draft using Local AI (Now passing agents too)
     const aiDraft = await aiService.generateDraft(message, categoryNames, allAgents);
 
-    // 4. Resolve the AI's chosen Category Name to an ID
     let selectedCategoryId = allCategories.find(
       (c) => c.name === aiDraft.category,
     )?.category_id;
@@ -53,15 +46,13 @@ export const submitRequest = async (
       selectedCategoryId = defaultCategory.category_id;
     }
 
-    // 5. Create the Ticket Draft
     const ticket = await dbService.createTicket(
       aiDraft.title,
       aiDraft.summary,
       selectedCategoryId,
-      null, // Creator: System User
+      null,
     );
 
-    // 6. Update Ticket with AI specifics
     const solutionText = Array.isArray(aiDraft.suggested_solution)
       ? "- " + aiDraft.suggested_solution.join("\n- ")
       : aiDraft.suggested_solution;
@@ -69,18 +60,15 @@ export const submitRequest = async (
     await dbService.updateTicket(ticket.ticket_id, {
       suggested_solution: solutionText,
       priority: aiDraft.priority,
-      assignee_user_id: aiDraft.assignee_id // <--- SAVE ASSIGNEE
+      assignee_user_id: aiDraft.assignee_id,
     });
 
-    // Link request to ticket
     await dbService.linkRequestToTicket(ticket.ticket_id, request.request_id);
 
-    // Send confirmation email
+    // Fire and forget — don't let email failure break the response
     emailService
       .sendConfirmationEmail(email, request.tracking_id, ticket.ticket_id)
-      .catch((err) => {
-        console.error("Failed to send confirmation email:", err);
-      });
+      .catch((err) => console.error("Failed to send confirmation email:", err));
 
     res.status(201).json({
       message: "Request submitted successfully",
@@ -90,18 +78,17 @@ export const submitRequest = async (
       ai_analysis: {
         category: aiDraft.category,
         priority: aiDraft.priority,
-        assigned_to: aiDraft.assignee_id // Optional: Show who got assigned
+        assigned_to: aiDraft.assignee_id,
       },
     });
   } catch (err) {
     const error = err as Error;
-    console.error(err);
+    console.error("submitRequest error:", err);
     res.status(500).json({ error: error.message || "Internal server error" });
   }
 };
 
-// ===== TRACK REQUEST =====
-
+// ===== TRACK REQUEST (PUBLIC — anyone with tracking_id can check status) =====
 export const trackRequest = async (
   req: Request,
   res: Response,
@@ -115,7 +102,6 @@ export const trackRequest = async (
     }
 
     const request = await dbService.getRequestByTrackingId(tracking_id);
-
     if (!request) {
       res.status(404).json({ error: "Request not found" });
       return;
@@ -128,7 +114,6 @@ export const trackRequest = async (
     }
 
     const ticket = await dbService.getTicketById(ticketIds[0]);
-
     if (!ticket) {
       res.status(404).json({ error: "Ticket not found" });
       return;
@@ -146,75 +131,79 @@ export const trackRequest = async (
         title: ticket.title,
         status: ticket.status?.name || "Draft",
         summary: ticket.summary,
-        suggested_solution: ticket.suggested_solution, // <--- ADDED THIS LINE
+        suggested_solution: ticket.suggested_solution,
         updated_at: ticket.updated_at,
         deadline: ticket.deadline,
+        // ✅ Fixed: use visibility field, not is_internal (matches your schema)
+        // Only show PUBLIC comments to anonymous trackers
         comments: (ticket.comments || [])
-          .filter((c: any) => !c.is_internal)
+          .filter((c: any) => c.visibility === "PUBLIC")
           .map((c: any) => ({
             comment_id: c.comment_id,
             content: c.content,
             created_at: c.created_at,
-            user_name: c.user?.name || "Unknown",
+            user_name: c.user?.user_name ?? c.user?.full_name ?? "Support Team",
           })),
       },
     });
   } catch (err) {
     const error = err as Error;
-    console.error(err);
+    console.error("trackRequest error:", err);
     res.status(500).json({ error: error.message || "Internal server error" });
   }
 };
 
-// ... (Rest of the file remains unchanged)
-export const getAllRequests = async (req: Request, res: Response): Promise<void> => {
-    // ... (Your existing code)
-    try {
-        if (!req.user || (req.user as UserProfile).role !== "ADMIN") {
-          res.status(403).json({ error: "Forbidden - Admin access required" });
-          return;
-        }
-
-        const { page = 1, limit = 20 } = req.query;
-        // Note: Pagination would require additional implementation in the db service
-        res.json({
-          message: "Pagination implementation required",
-          hint: "Use /api/requests/track/:tracking_id to get request details",
-        });
-      } catch (err) {
-        const error = err as Error;
-        console.error(err);
-        res.status(500).json({ error: error.message || "Internal server error" });
-      }
+// ===== GET ALL REQUESTS (admin only — enforced via middleware in route file) =====
+// ✅ Role check removed from here — use authorize(["admin"]) in request.route.ts instead
+export const getAllRequests = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+    res.json({
+      message: "Pagination implementation required",
+      hint: "Use /api/requests/track/:tracking_id to get request details",
+    });
+  } catch (err) {
+    const error = err as Error;
+    console.error("getAllRequests error:", err);
+    res.status(500).json({ error: error.message || "Internal server error" });
+  }
 };
 
-export const verifyTrackingToken = async (req: Request, res: Response): Promise<void> => {
-    // ... (Your existing code)
+// ===== VERIFY TRACKING TOKEN =====
+// ✅ Fixed: uses SUPABASE_JWT_SECRET instead of removed custom verifyTrackingToken
+// Note: if tracking tokens need to outlive user sessions, consider a DB-based
+// approach (store token hash + expiry in the requests table) instead of JWT
+export const verifyTrackingToken = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      res.status(400).json({ error: "Token is required" });
+      return;
+    }
+
     try {
-        const { token } = req.body;
+      const decoded = jwt.verify(token, config.supabase.jwtSecret, {
+        algorithms: ["HS256"],
+      }) as { email?: string; request_id?: number };
 
-        if (!token) {
-          res.status(400).json({ error: "Token is required" });
-          return;
-        }
-
-        // Import here to avoid circular dependency
-        const { verifyTrackingToken } = await import("../services/auth.service");
-        const decoded = verifyTrackingToken(token);
-
-        if (!decoded) {
-          res.status(401).json({ error: "Invalid or expired tracking token" });
-          return;
-        }
-
-        res.json({
-          valid: true,
-          email: decoded.email,
-          request_id: decoded.request_id,
-        });
-      } catch (err) {
-        const error = err as Error;
-        console.error(err);
-        res.status(500).json({ error: error.message || "Internal server error" });
-      }
+      res.json({
+        valid: true,
+        email: decoded.email,
+        request_id: decoded.request_id,
+      });
+    } catch {
+      res.status(401).json({ error: "Invalid or expired tracking token" });
+    }
+  } catch (err) {
+    const error = err as Error;
+    console.error("verifyTrackingToken error:", err);
+    res.status(500).json({ error: error.message || "Internal server error" });
+  }
 };

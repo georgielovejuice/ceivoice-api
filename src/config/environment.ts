@@ -17,16 +17,15 @@ export const config = {
   jwtAlgorithms: ["HS256"] as string[],
 
   // Supabase Configuration (OAuth server)
-  supabase: {
-    url: process.env.SUPABASE_URL || "",
-    anonKey: process.env.SUPABASE_ANON_KEY || "",
-    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || "",
-    // The URL Supabase will redirect to after the Google OAuth dance.
-    // Must be registered in your Supabase project → Auth → URL Configuration.
-    callbackURL:
-      process.env.SUPABASE_OAUTH_CALLBACK_URL ||
-      "http://localhost:5000/api/auth/google/callback"
-  },
+supabase: {
+  url: process.env.SUPABASE_URL || "",
+  anonKey: process.env.SUPABASE_ANON_KEY || "",
+  serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || "",
+  jwtSecret: process.env.SUPABASE_JWT_SECRET || "",  // ✅ add this
+  callbackURL:
+    process.env.SUPABASE_OAUTH_CALLBACK_URL ||
+    "http://localhost:5000/api/auth/google/callback",
+},
 
   // API Configuration
   api: {
