@@ -2,10 +2,31 @@ import { Request, Response } from "express";
 import * as dbService from "../services/db.service";
 import type { UserProfile } from "../types";
 import * as emailService from "../services/email.service";
-import { aiService } from "../services/ai.service";
+import type { AiTicketDraft } from "../services/ai.service";
+// import { aiService } from "../services/ai.service"; // TODO: uncomment when AI is ready
 import * as validator from "email-validator";
 import jwt from "jsonwebtoken";
 import config from "../config/environment";
+
+// ---------------------------------------------------------------------------
+// Stub draft — used until the AI service is enabled.
+// Replace this call with `aiService.generateDraft(message, categoryNames, allAgents)`
+// once the AI model is running.
+// ---------------------------------------------------------------------------
+function buildBasicDraft(message: string, categoryNames: string[]): AiTicketDraft {
+  // Strip leading markdown bold (e.g. "**Subject**\n\nBody") to get a clean title
+  const firstLine = message.split('\n')[0].replace(/^\*\*(.+)\*\*$/, '$1').trim();
+  const title = firstLine.length > 80 ? firstLine.slice(0, 77) + '...' : firstLine || 'New Support Request';
+
+  return {
+    title,
+    category: categoryNames[0] ?? 'General',
+    summary: message.slice(0, 300),
+    suggested_solution: 'Under review by the support team.',
+    priority: 'Medium',
+    assignee_id: null,
+  };
+}
 
 // ===== SUBMIT REQUEST (PUBLIC — no auth required) =====
 // This is the anonymous submission form endpoint
@@ -33,9 +54,11 @@ export const submitRequest = async (
 
     const allCategories = await dbService.getAllActiveCategories();
     const categoryNames = allCategories.map((c) => c.name);
-    const allAgents = await dbService.getAllAssignees();
 
-    const aiDraft = await aiService.generateDraft(message, categoryNames, allAgents);
+    // TODO: replace with AI when ready:
+    // const allAgents = await dbService.getAllAssignees();
+    // const aiDraft = await aiService.generateDraft(message, categoryNames, allAgents);
+    const aiDraft = buildBasicDraft(message, categoryNames);
 
     let selectedCategoryId = allCategories.find(
       (c) => c.name === aiDraft.category,
