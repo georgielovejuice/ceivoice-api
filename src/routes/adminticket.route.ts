@@ -7,6 +7,9 @@ const router = Router();
 // All admin routes require authentication and admin role
 router.use(authenticate, authorize(["ADMIN"]));
 
+// All tickets
+router.get("/tickets", adminController.listAllTickets);
+
 // Draft management
 router.get("/drafts", adminController.listDrafts);
 router.put("/drafts/:id", adminController.updateDraft);

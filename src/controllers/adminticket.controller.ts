@@ -147,6 +147,26 @@ export const approveDraft = async (
   }
 };
 
+// ===== ALL TICKETS =====
+
+export const listAllTickets = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    if (!req.user || (req.user as UserProfile).role !== "ADMIN") {
+      res.status(403).json({ error: "Forbidden - Admin access required" });
+      return;
+    }
+
+    const tickets = await dbService.getAllTickets();
+    res.json(tickets);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch tickets" });
+  }
+};
+
 // ===== ACTIVE TICKETS =====
 
 export const listActiveTickets = async (
