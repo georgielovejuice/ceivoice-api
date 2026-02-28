@@ -156,8 +156,6 @@ export const trackRequest = async (
         suggested_solution: ticket.suggested_solution,
         updated_at: ticket.updated_at,
         deadline: ticket.deadline,
-        // ✅ Fixed: use visibility field, not is_internal (matches your schema)
-        // Only show PUBLIC comments to anonymous trackers
         comments: (ticket.comments || [])
           .filter((c: any) => c.visibility === "PUBLIC")
           .map((c: any) => ({
