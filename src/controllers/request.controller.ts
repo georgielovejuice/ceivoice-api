@@ -1,6 +1,10 @@
 import { Request, Response } from "express";
 import * as dbService from "../services/db.service";
 import * as emailService from "../services/email.service";
+import { aiService } from "../services/ai.service";
+
+// ===== SUBMIT REQUEST =====
+
 import type { AiTicketDraft } from "../services/ai.service";
 // import { aiService } from "../services/ai.service"; // TODO: uncomment when AI is ready
 import * as validator from "email-validator";
@@ -48,6 +52,8 @@ export const submitRequest = async (
       return;
     }
 
+    // 1. Create the Raw Request with authenticated user email
+    const request = await dbService.createRequest(userEmail, message);
     // 1. Save the raw request immediately
     const request = await dbService.createRequest(email, message);
 
@@ -62,8 +68,25 @@ export const submitRequest = async (
       defaultCategory = createdDefault.category_id;
     }
 
+    // 5. Create the Ticket Draft with authenticated user as creator
     // 3. Create the placeholder ticket immediately
     const ticket = await dbService.createTicket(
+      aiDraft.title,
+      aiDraft.summary,
+      selectedCategoryId,
+      userId, // Creator: Authenticated user
+    );
+
+    // 6. Update Ticket with AI specifics
+    const solutionText = Array.isArray(aiDraft.suggested_solution)
+      ? "- " + aiDraft.suggested_solution.join("\n- ")
+      : aiDraft.suggested_solution;
+
+    await dbService.updateTicket(ticket.ticket_id, {
+      suggested_solution: solutionText,
+      priority: aiDraft.priority,
+      assignee_user_id: aiDraft.assignee_id // <--- SAVE ASSIGNEE
+    });
       "AI is analyzing your request...", // Temporary Title
       "AI is generating the summary and suggested solution...", // Temporary Summary
       defaultCategory,

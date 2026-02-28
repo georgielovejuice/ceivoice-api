@@ -29,4 +29,16 @@ router.get("/stats", adminController.getTicketStats);
 router.get("/notifications", adminController.getUserNotifications);
 router.put("/notifications/:id/read", adminController.markNotificationAsRead);
 
+// Merge/Unmerge
+router.post("/:id/merge", adminController.mergeTickets);
+router.post("/:id/unmerge", adminController.unmergeTicket);
+
+// User role management (EP06-ST001)
+router.patch("/users/:userId/role", adminController.updateUserRole);
+
+// Assignee scope management (EP06-ST002)
+router.get("/assignees/:assigneeId/scopes", adminController.getAssigneeScopes);
+router.post("/assignees/:assigneeId/scopes", adminController.addAssigneeScope);
+router.delete("/assignees/:assigneeId/scopes/:scopeId", adminController.removeAssigneeScope);
+
 export default router;

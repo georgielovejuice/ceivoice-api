@@ -18,10 +18,10 @@ export class AiService {
   ) {
     try {
       // 1. The Index Trick: Map simple numbers to complicated UUIDs
-      const agentMap: Record<number, string> = {}; 
-      
+      const agentMap: Record<number, string> = {};
+
       const agentList = availableAgents.map((a, index) => {
-        agentMap[index] = a.user_id; 
+        agentMap[index] = a.user_id;
         return {
           id: index, // Give the AI a simple number
           name: a.full_name || 'Agent',
@@ -42,7 +42,7 @@ export class AiService {
         You are an expert Corporate Helpdesk Dispatcher. Analyze the user's request: "${userMessage}"
         Valid Categories: ${JSON.stringify(availableCategoryNames)}
         Available Agents: ${JSON.stringify(agentList)}
-        
+
         Output strictly JSON with these exact keys:
         {
           "title": "Short, concise title",
@@ -54,7 +54,7 @@ export class AiService {
         }
       `;
 
-      
+
       // 3. Call the local AI Model
       const response = await ollama.chat({
         model: this.modelName,

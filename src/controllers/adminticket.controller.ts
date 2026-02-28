@@ -122,6 +122,25 @@ export const approveDraft = async (
       (req.user as UserProfile).user_id
     );
 
+    // Auto-add request creators as followers (EP03-ST006)
+    if (ticket.ticket_requests && ticket.ticket_requests.length > 0) {
+      for (const tr of ticket.ticket_requests) {
+        const request = tr.request;
+        if (request && request.email) {
+          try {
+            // Find user by email and add as follower
+            const user = await dbService.getUserByEmail(request.email);
+            if (user) {
+              await dbService.addFollower(ticketId, user.user_id);
+            }
+          } catch (err) {
+            console.warn(`Failed to add follower for ${request.email}:`, err);
+            // Continue - follower not critical, email notification is primary
+          }
+        }
+      }
+    }
+
     // Send notification emails to associated users
     if (ticket.ticket_requests.length > 0) {
       const request = ticket.ticket_requests[0]?.request;
@@ -322,5 +341,245 @@ export const markNotificationAsRead = async (
     const error = err as Error;
     console.error(err);
     res.status(500).json({ error: error.message });
+  }
+};
+// ===== MERGE/UNMERGE TICKETS =====
+
+export const mergeTickets = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    if (!req.user || (req.user as UserProfile).role !== "ADMIN") {
+      res.status(403).json({ error: "Forbidden - Admin access required" });
+      return;
+    }
+
+    const parentTicketId = parseInt(req.params.id, 10);
+    const { child_ticket_ids } = req.body;
+
+    if (!Array.isArray(child_ticket_ids) || child_ticket_ids.length === 0) {
+      res.status(400).json({ error: "child_ticket_ids must be a non-empty array" });
+      return;
+    }
+
+    // Get parent ticket
+    const parentTicket = await dbService.getTicketById(parentTicketId);
+    if (!parentTicket) {
+      res.status(404).json({ error: "Parent ticket not found" });
+      return;
+    }
+
+    // Merge child tickets
+    const merged = await dbService.mergeTickets(parentTicketId, child_ticket_ids);
+
+    res.json({
+      message: "Tickets merged successfully",
+      parent_ticket_id: parentTicketId,
+      merged_child_count: merged.length
+    });
+  } catch (err) {
+    const error = err as Error;
+    console.error(err);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const unmergeTicket = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    if (!req.user || (req.user as UserProfile).role !== "ADMIN") {
+      res.status(403).json({ error: "Forbidden - Admin access required" });
+      return;
+    }
+
+    const childTicketId = parseInt(req.params.id, 10);
+
+    // Get child ticket
+    const childTicket = await dbService.getTicketById(childTicketId);
+    if (!childTicket || !childTicket.parent_ticket_id) {
+      res.status(404).json({ error: "Ticket is not a merged child" });
+      return;
+    }
+
+    // Unmerge
+    await dbService.unmergeTicket(childTicketId);
+
+    res.json({
+      message: "Ticket unmerged successfully",
+      ticket_id: childTicketId
+    });
+  } catch (err) {
+    const error = err as Error;
+    console.error(err);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// ===== USER ROLE MANAGEMENT =====
+
+export const updateUserRole = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    if (!req.user || (req.user as UserProfile).role !== "ADMIN") {
+      res.status(403).json({ error: "Forbidden - Admin access required" });
+      return;
+    }
+
+    const userId = parseInt(req.params.userId, 10);
+    const { role } = req.body;
+
+    if (!role) {
+      res.status(400).json({ error: "Role is required" });
+      return;
+    }
+
+    // Validate role value
+    const validRoles = ["ADMIN", "ASSIGNEE", "USER"];
+    if (!validRoles.includes(role)) {
+      res.status(400).json({
+        error: `Invalid role. Must be one of: ${validRoles.join(", ")}`
+      });
+      return;
+    }
+
+    // Get user and verify exists
+    const user = await dbService.getUserById(userId);
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    // Update user role (EP06-ST001)
+    const updatedUser = await dbService.updateUserRole(userId, role);
+
+    res.json({
+      message: "User role updated successfully",
+      user_id: updatedUser.user_id,
+      email: updatedUser.email,
+      name: updatedUser.name,
+      role: updatedUser.role
+    });
+  } catch (err) {
+    const error = err as Error;
+    console.error(err);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// ===== ASSIGNEE SCOPE MANAGEMENT =====
+
+export const getAssigneeScopes = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    if (!req.user || (req.user as UserProfile).role !== "ADMIN") {
+      res.status(403).json({ error: "Forbidden - Admin access required" });
+      return;
+    }
+
+    const assigneeId = parseInt(req.params.assigneeId, 10);
+
+    // Verify assignee exists
+    const assignee = await dbService.getUserById(assigneeId);
+    if (!assignee) {
+      res.status(404).json({ error: "Assignee not found" });
+      return;
+    }
+
+    // Get all scopes for assignee (EP06-ST002)
+    const scopes = await dbService.getAssigneeScopes(assigneeId);
+
+    res.json({
+      message: "Assignee scopes retrieved successfully",
+      assignee_id: assigneeId,
+      scopes: scopes
+    });
+  } catch (err) {
+    const error = err as Error;
+    console.error(err);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const addAssigneeScope = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    if (!req.user || (req.user as UserProfile).role !== "ADMIN") {
+      res.status(403).json({ error: "Forbidden - Admin access required" });
+      return;
+    }
+
+    const assigneeId = parseInt(req.params.assigneeId, 10);
+    const { scope_name } = req.body;
+
+    if (!scope_name) {
+      res.status(400).json({ error: "scope_name is required" });
+      return;
+    }
+
+    // Validate scope_name
+    if (typeof scope_name !== "string" || scope_name.trim().length === 0) {
+      res.status(400).json({ error: "scope_name must be a non-empty string" });
+      return;
+    }
+
+    // Verify assignee exists
+    const assignee = await dbService.getUserById(assigneeId);
+    if (!assignee) {
+      res.status(404).json({ error: "Assignee not found" });
+      return;
+    }
+
+    // Add scope to assignee (EP06-ST002)
+    const scope = await dbService.assignScope(assigneeId, scope_name.trim());
+
+    res.status(201).json({
+      message: "Scope added to assignee successfully",
+      scope: scope
+    });
+  } catch (err) {
+    const error = err as Error;
+    console.error(err);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const removeAssigneeScope = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    if (!req.user || (req.user as UserProfile).role !== "ADMIN") {
+      res.status(403).json({ error: "Forbidden - Admin access required" });
+      return;
+    }
+
+    const scopeId = parseInt(req.params.scopeId, 10);
+
+    // Remove scope (EP06-ST002)
+    await dbService.removeScopeById(scopeId);
+
+    res.json({
+      message: "Scope removed successfully",
+      scope_id: scopeId
+    });
+  } catch (err) {
+    const error = err as Error;
+    console.error(err);
+    
+    // Handle "not found" error
+    if (error.message && error.message.includes("not found")) {
+      res.status(404).json({ error: "Scope not found" });
+    } else {
+      res.status(500).json({ error: error.message });
+    }
   }
 };

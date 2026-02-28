@@ -376,6 +376,22 @@ export const assignTicket = async (
     // Update ticket status to Assigned (status_id: 3)
     await dbService.updateTicket(ticketId, { status_id: 3 });
 
+    // Send reassignment notification email (EP04-ST004/ST005)
+    try {
+      const assignee = await dbService.getUserById(assignee_id);
+      if (assignee && assignee.email) {
+        await emailService.sendAssignmentNotificationEmail(
+          assignee.email,
+          ticketId,
+          ticket.title || `Ticket #${ticketId}`,
+          assignee.name || "Support Team"
+        );
+      }
+    } catch (err) {
+      console.warn("Failed to send reassignment notification email:", err);
+      // Don't fail the main request - assignment is already done
+    }
+
     res.json({ message: "Ticket assigned successfully" });
   } catch (err) {
     console.error(err);
@@ -424,6 +440,31 @@ export const addComment = async (
       content,
       is_internal || false
     );
+
+    // Send email notification if comment is PUBLIC (EP01-ST005)
+    if (!is_internal) {
+      try {
+        const ticket = await dbService.getTicketById(ticketId);
+        const commenterEmail = (req.user as UserProfile).email || "Support Team";
+        
+        if (ticket && ticket.ticket_requests && ticket.ticket_requests.length > 0) {
+          const request = ticket.ticket_requests[0]?.request;
+          if (request) {
+            await emailService.sendCommentNotificationEmail(
+              request.email,
+              ticketId,
+              commenterEmail,
+              request.tracking_id
+            ).catch((err) => {
+              console.warn("Failed to send comment notification email:", err);
+            });
+          }
+        }
+      } catch (err) {
+        console.warn("Error processing comment notification:", err);
+        // Don't fail the main request - comment is already saved
+      }
+    }
 
     res.status(201).json({
       message: "Comment added successfully",

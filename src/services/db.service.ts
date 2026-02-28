@@ -306,6 +306,28 @@ export const getFollowers = async (ticketId: number) => {
   });
 };
 
+// Get user by email (for following request creators)
+export const getUserByEmail = async (email: string) => {
+  return await prisma.user.findUnique({
+    where: { email }
+  });
+};
+
+// Get user by ID (for reassignment notifications)
+export const getUserById = async (userId: number) => {
+  return await prisma.user.findUnique({
+    where: { user_id: userId }
+  });
+};
+
+// Update user role (for admin role management)
+export const updateUserRole = async (userId: number, role: string) => {
+  return await prisma.user.update({
+    where: { user_id: userId },
+    data: { role }
+  });
+};
+
 // ===== NOTIFICATION SERVICE =====
 
 export const createNotification = async (
@@ -360,6 +382,33 @@ export const getAssigneeScopes = async (assigneeId: string) => {
 export const removeScope = async (assigneeId: string, scopeName: string) => {
   return await prisma.assigneeScope.deleteMany({
     where: { assignee_id: assigneeId, scope_name: scopeName }
+  });
+};
+
+export const removeScopeById = async (scopeId: number) => {
+  return await prisma.assigneeScope.delete({
+    where: { scope_id: scopeId }
+  });
+};
+
+// ===== OAUTH SERVICE =====
+
+export const saveOAuthToken = async (
+  userId: number,
+  googleToken: string,
+  refreshToken?: string,
+  expiresAt?: Date
+) => {
+  return await prisma.oAuthToken.upsert({
+    where: { user_id: userId },
+    update: { google_token: googleToken, refresh_token: refreshToken, expires_at: expiresAt },
+    create: { user_id: userId, google_token: googleToken, refresh_token: refreshToken, expires_at: expiresAt }
+  });
+};
+
+export const getOAuthToken = async (userId: number) => {
+  return await prisma.oAuthToken.findUnique({
+    where: { user_id: userId }
   });
 };
 
@@ -744,5 +793,27 @@ export const getAllActiveCategories = async () => {
   return await prisma.category.findMany({
     where: { is_active: true },
     select: { name: true, category_id: true }
+  });
+};
+
+// ===== MERGE/UNMERGE SERVICE =====
+
+export const mergeTickets = async (parentTicketId: number, childTicketIds: number[]) => {
+  const merged = await Promise.all(
+    childTicketIds.map((childId) =>
+      prisma.ticket.update({
+        where: { ticket_id: childId },
+        data: { parent_ticket_id: parentTicketId }
+      })
+    )
+  );
+
+  return merged;
+};
+
+export const unmergeTicket = async (childTicketId: number) => {
+  return await prisma.ticket.update({
+    where: { ticket_id: childTicketId },
+    data: { parent_ticket_id: null }
   });
 };
