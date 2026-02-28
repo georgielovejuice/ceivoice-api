@@ -120,7 +120,8 @@ export const getAllCategories = async () => {
 
 export const getAllAssignees = async () => {
   return await prisma.user.findMany({
-    where: { role: { in: ["ASSIGNEE", "ADMIN"] } },
+    // 👇 Updated to include the lowercase versions matching your Supabase constraint
+    where: { role: { in: ["assignee", "admin", "ASSIGNEE", "ADMIN"] } },
     include: {
       scopes: true,
       assigned_tickets: {
