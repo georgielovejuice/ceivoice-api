@@ -7,8 +7,6 @@ async function main() {
   // ==============================================
   // 0. CLEANUP OLD DYNAMIC DATA (For safe re-running)
   // ==============================================
-
-  // Create Ticket Statuses
   console.log('🧹 Cleaning up old transactional data...')
   await prisma.ticketRequest.deleteMany()
   await prisma.statusHistory.deleteMany()
@@ -87,9 +85,6 @@ async function main() {
     create: { email: 'john.doe@example.com', full_name: 'John Doe', role: 'user' },
   })
 
-  const user2 = await prisma.user.create({
-    data: { email: 'jane.smith@example.com', name: 'Jane Smith', role: 'USER' },
-
   const user2 = await prisma.user.upsert({
     where: { email: 'jane.smith@example.com' }, update: {},
     create: { email: 'jane.smith@example.com', full_name: 'Jane Smith', role: 'user' },
@@ -103,18 +98,6 @@ async function main() {
   // ==============================================
   // 3. CREATE TICKETS & REQUESTS (Simulating varying lifecycles)
   // ==============================================
-
-  // Get status IDs
-  const draftStatus = await prisma.ticketStatus.findUnique({ where: { name: 'Draft' } })
-  const newStatus = await prisma.ticketStatus.findUnique({ where: { name: 'New' } })
-  const assignedStatus = await prisma.ticketStatus.findUnique({ where: { name: 'Assigned' } })
-  const solvingStatus = await prisma.ticketStatus.findUnique({ where: { name: 'Solving' } })
-
-  // Get category ID
-  const techSupportCategory = await prisma.category.findUnique({ where: { name: 'Technical Support' } })
-
-  // --- Scenario 1: Standard Ticket with Comments ---
-  const ticket1 = await prisma.ticket.create({
   console.log('🎫 Seeding Tickets & Requests...')
 
   const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)

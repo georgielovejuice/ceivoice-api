@@ -1,103 +1,115 @@
-import ollama from 'ollama';
+import ollama from "ollama";
+import { PrismaClient } from "@prisma/client";
 
-// 1. Update Interface to include assignee_id
-export interface AiTicketDraft {
-  title: string;
-  category: string;
-  summary: string;
-  suggested_solution: string;
-  priority: 'Low' | 'Medium' | 'High' | 'Critical';
-  assignee_id: number | null; // <--- NEW FIELD
-}
+const prisma = new PrismaClient();
 
 export class AiService {
-  private modelName = 'ceivoice-ai'; 
+  private modelName = "ceivoice-ai";
 
   /**
-   * Analyzes a raw user message and converts it into a structured Ticket Draft.
-   * @param userMessage - The text from the Request
-   * @param availableCategories - Array of category names
-   * @param availableAgents - Array of agents with their skills (scopes)
+   * ALL-IN-ONE BACKGROUND WORKER
+   * Processes Category, Priority, Assignee, Summary, and Solution in one pass.
    */
-  async generateDraft(
-    userMessage: string, 
-    availableCategories: string[],
-    availableAgents: any[] = [] // <--- NEW PARAMETER
-  ): Promise<AiTicketDraft> {
-    
-    // Format agents for the AI prompt
-    const agentList = availableAgents.map(a => ({
-      id: a.user_id,
-      name: a.name,
-      // Assuming 'scopes' is an array of objects like { scope_name: 'Hardware' }
-      skills: a.scopes ? a.scopes.map((s: any) => s.scope_name).join(", ") : ""
-    }));
-
-    // 2. Construct the prompt
-    const prompt = `
-      You are an expert IT Support Dispatcher. Analyze the user's request and output a JSON object.
-
-      CONTEXT:
-      - Valid Categories: ${JSON.stringify(availableCategories)}
-      - Valid Priorities: ["Low", "Medium", "High", "Critical"]
-      - Available Agents: ${JSON.stringify(agentList)}
-
-      USER REQUEST:
-      "${userMessage}"
-
-      INSTRUCTIONS:
-      1. title: Create a concise, professional title (max 80 chars).
-      2. category: MUST be one of the Valid Categories provided above.
-      3. assignee_id: Select the 'id' of the agent whose skills best match the request. If no strong match, return null.
-      4. summary: Summarize the issue in 2-3 sentences.
-      5. suggested_solution: specific, actionable steps to resolve this technical issue.
-      6. priority: Assess urgency based on business impact.
-
-      OUTPUT FORMAT (JSON ONLY, NO MARKDOWN):
-      {
-        "title": "...",
-        "category": "...",
-        "assignee_id": 123, 
-        "summary": "...",
-        "suggested_solution": "...",
-        "priority": "..."
-      }
-    `;
-
+  async processTicketFull(
+    ticketId: number,
+    userMessage: string,
+    availableCategoryNames: string[],
+    availableAgents: any[],
+  ) {
     try {
+      // 1. The Index Trick: Map simple numbers to complicated UUIDs
+      const agentMap: Record<number, string> = {}; 
+      
+      const agentList = availableAgents.map((a, index) => {
+        agentMap[index] = a.user_id; 
+        return {
+          id: index, // Give the AI a simple number
+          name: a.full_name || 'Agent',
+          skills: a.scopes ? a.scopes.map((s: any) => s.scope_name).join(", ") : "General"
+        };
+      });
+
+      // 👇 THE HACK: Add a fake agent to the end of the list for the AI to pick
+      const UNASSIGNED_ID = -1;
+      agentList.push({
+        id: UNASSIGNED_ID,
+        name: "Unassigned Queue",
+        skills: "Use this agent if the request does not perfectly match the skills of the other agents. Do not guess."
+      });
+
+      // 2. The Master Prompt
+      const prompt = `
+        You are an expert Corporate Helpdesk Dispatcher. Analyze the user's request: "${userMessage}"
+        Valid Categories: ${JSON.stringify(availableCategoryNames)}
+        Available Agents: ${JSON.stringify(agentList)}
+        
+        Output strictly JSON with these exact keys:
+        {
+          "title": "Short, concise title",
+          "category": "Must match one of the Valid Categories exactly",
+          "assignee_id": "Look at your chosen 'category'. Find an agent whose 'skills' explicitly cover this category. If there is no explicit match, you MUST output -1. Do not guess.",
+          "priority": "Low", "Medium", "High", or "Critical",
+          "summary": "Write a formal 2-sentence dispatcher summary. Sentence 1: State the core problem. Sentence 2: State the business impact. Do NOT use first-person pronouns.",
+          "suggested_solution": "A step-by-step guide to fix it. Return a single string, NOT an array."
+        }
+      `;
+
+      
+      // 3. Call the local AI Model
       const response = await ollama.chat({
         model: this.modelName,
-        format: 'json',
-        messages: [{ role: 'user', content: prompt }],
-        options: { temperature: 0.1 }
+        format: "json",
+        messages: [{ role: "user", content: prompt }],
+        options: { temperature: 0.2 },
       });
 
       const data = JSON.parse(response.message.content);
 
-      // Fallback logic
-      const finalCategory = availableCategories.includes(data.category) 
-        ? data.category 
-        : availableCategories[0] || 'General';
 
-      return {
-        title: data.title || "New Support Request",
-        category: finalCategory,
-        summary: data.summary,
-        suggested_solution: data.suggested_solution,
-        priority: data.priority,
-        assignee_id: data.assignee_id || null // <--- RETURN ID
-      };
+      // 4. Data Formatting & Fallbacks
+      // 👇 Update this logic so if the AI picks -1, it translates to a real database 'null'
+      let finalAssigneeId = null;
+      if (data.assignee_id !== null && data.assignee_id !== UNASSIGNED_ID && agentMap[data.assignee_id]) {
+        finalAssigneeId = agentMap[data.assignee_id];
+      }
 
+      const finalCategoryName = availableCategoryNames.includes(data.category)
+        ? data.category
+        : availableCategoryNames[0] || "General";
+
+      const solutionText = Array.isArray(data.suggested_solution)
+        ? "- " + data.suggested_solution.join("\n- ")
+        : data.suggested_solution;
+
+      // Lookup the actual category ID from the database based on the AI's string choice
+      const categoryRecord = await prisma.category.findUnique({
+        where: { name: finalCategoryName },
+      });
+
+      // 5. Update the placeholder ticket in the database with the real data!
+      await prisma.ticket.update({
+        where: { ticket_id: ticketId },
+        data: {
+          title: data.title || "New Support Request",
+          summary: data.summary || "Summary generation failed.",
+          suggested_solution: solutionText,
+          priority: data.priority || "Medium",
+          assignee_user_id: finalAssigneeId,
+          category_id: categoryRecord?.category_id,
+        },
+      });
+
+      console.log(
+        `✅ Background AI Processing Complete for Ticket #${ticketId}`,
+      );
     } catch (error) {
-      console.error("❌ AI Service Error:", error);
-      return {
-        title: "New Support Request",
-        category: availableCategories[0] || "Uncategorized",
-        summary: userMessage.substring(0, 200),
-        suggested_solution: "AI processing failed. Please review manually.",
-        priority: "Medium",
-        assignee_id: null
-      };
+      console.error(`❌ Background AI failed for Ticket #${ticketId}:`, error);
+
+      // If the AI crashes, update the ticket so the Admin knows it failed
+      await prisma.ticket.update({
+        where: { ticket_id: ticketId },
+        data: { summary: "AI processing failed. Please review manually." },
+      });
     }
   }
 }

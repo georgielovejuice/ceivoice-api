@@ -28,7 +28,6 @@ function buildBasicDraft(message: string, categoryNames: string[]): AiTicketDraf
 }
 
 // ===== SUBMIT REQUEST (PUBLIC — no auth required) =====
-// This is the anonymous submission form endpoint
 export const submitRequest = async (
   req: Request,
   res: Response,
@@ -49,59 +48,52 @@ export const submitRequest = async (
       return;
     }
 
+    // 1. Save the raw request immediately
     const request = await dbService.createRequest(email, message);
 
+    // 2. Fetch required lookup data (Fast DB calls)
     const allCategories = await dbService.getAllActiveCategories();
-    const categoryNames = allCategories.map((c) => c.name);
+    const allAgents = await dbService.getAllAssignees();
 
-    // TODO: replace with AI when ready:
-    // const allAgents = await dbService.getAllAssignees();
-    // const aiDraft = await aiService.generateDraft(message, categoryNames, allAgents);
-    const aiDraft = buildBasicDraft(message, categoryNames);
-
-    let selectedCategoryId = allCategories.find(
-      (c) => c.name === aiDraft.category,
-    )?.category_id;
-
-    if (!selectedCategoryId) {
-      const defaultCategory = await dbService.getOrCreateCategory("General");
-      selectedCategoryId = defaultCategory.category_id;
+    // Fallback category while AI works
+    let defaultCategory = allCategories.find((c) => c.name === "General")?.category_id;
+    if (!defaultCategory) {
+      const createdDefault = await dbService.getOrCreateCategory("General");
+      defaultCategory = createdDefault.category_id;
     }
 
+    // 3. Create the placeholder ticket immediately
     const ticket = await dbService.createTicket(
-      aiDraft.title,
-      aiDraft.summary,
-      selectedCategoryId,
-      user_id,
+      "AI is analyzing your request...", // Temporary Title
+      "AI is generating the summary and suggested solution...", // Temporary Summary
+      defaultCategory,
+      null, // Assignee
     );
 
-    const solutionText = Array.isArray(aiDraft.suggested_solution)
-      ? "- " + aiDraft.suggested_solution.join("\n- ")
-      : aiDraft.suggested_solution;
-
-    await dbService.updateTicket(ticket.ticket_id, {
-      suggested_solution: solutionText,
-      priority: aiDraft.priority,
-      assignee_user_id: aiDraft.assignee_id,
-    });
-
+    // Link them together
     await dbService.linkRequestToTicket(ticket.ticket_id, request.request_id);
 
-    // Fire and forget — don't let email failure break the response
+    // 4. FIRE AND FORGET THE AI! (🐢 SLOW PATH)
+    // We pass the lookup data so the AI service doesn't have to query the DB again
+    aiService.processTicketFull(
+      ticket.ticket_id,
+      message,
+      allCategories.map(c => c.name),
+      allAgents
+    ).catch((err: any) => console.error("❌ Background AI Worker failed:", err));
+
+    // Fire and forget email
     emailService
       .sendConfirmationEmail(email, request.tracking_id, ticket.ticket_id)
       .catch((err) => console.error("Failed to send confirmation email:", err));
 
+    // 5. RETURN INSTANTLY TO THE USER (Should take < 100ms)
     res.status(201).json({
-      message: "Request submitted successfully",
+      message: "Request submitted successfully. AI is currently classifying and assigning your ticket.",
       ticket_id: ticket.ticket_id,
       tracking_id: request.tracking_id,
       status: "Draft",
-      ai_analysis: {
-        category: aiDraft.category,
-        priority: aiDraft.priority,
-        assigned_to: aiDraft.assignee_id,
-      },
+      // We no longer return the ai_analysis here because the user didn't wait for it!
     });
   } catch (err) {
     const error = err as Error;
