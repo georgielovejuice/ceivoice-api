@@ -2,7 +2,7 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export const db = prisma; 
+export const db = prisma;
 // This allows other files to access db.category, db.user, etc. directly.
 
 
@@ -12,7 +12,7 @@ export const createTicket = async (
   title: string,
   summary: string,
   categoryId: number,
-  creatorUserId: number,
+  creatorUserId: string | null,
   statusId: number = 1 // 1 = Draft
 ) => {
   return await prisma.ticket.create({
@@ -79,7 +79,7 @@ export const getTicketsByStatus = async (statusId: number) => {
   });
 };
 
-export const getTicketsByAssignee = async (assigneeId: number) => {
+export const getTicketsByAssignee = async (assigneeId: string) => {
   return await prisma.ticket.findMany({
     where: {
       assignee_user_id: assigneeId,
@@ -134,7 +134,7 @@ export const getAllAssignees = async () => {
 
 export const assignTicket = async (
   ticketId: number,
-  assigneeId: number
+  assigneeId: string
 ) => {
   return await prisma.ticket.update({
     where: { ticket_id: ticketId },
@@ -158,7 +158,7 @@ export const getTicketAssignees = async (ticketId: number) => {
     where: { ticket_id: ticketId },
     include: { assignee: true }
   });
-  
+
   return ticket?.assignee ? [ticket.assignee] : [];
 };
 
@@ -166,7 +166,7 @@ export const getTicketAssignees = async (ticketId: number) => {
 
 export const addComment = async (
   ticketId: number,
-  userId: number,
+  userId: string,
   content: string,
   isInternal: boolean = false
 ) => {
@@ -202,7 +202,7 @@ export const createStatusHistory = async (
   ticketId: number,
   oldStatusId: number,
   newStatusId: number,
-  changedById: number,
+  changedById: string,
   changeReason?: string
 ) => {
   return await prisma.statusHistory.create({
@@ -233,9 +233,9 @@ export const getStatusHistory = async (ticketId: number) => {
 
 export const createAssignmentHistory = async (
   ticketId: number,
-  oldAssigneeId: number | null,
-  newAssigneeId: number | null,
-  changedById?: number,
+  oldAssigneeId: string | null,
+  newAssigneeId: string | null,
+  changedById: string,
   changeReason?: string
 ) => {
   return await prisma.assignmentHistory.create({
@@ -243,7 +243,7 @@ export const createAssignmentHistory = async (
       ticket_id: ticketId,
       old_assignee_id: oldAssigneeId,
       new_assignee_id: newAssigneeId,
-      changed_by_id: changedById || 1, // Default to system if not provided
+      changed_by_id: changedById,
       change_reason: changeReason
     },
     include: {
@@ -264,7 +264,7 @@ export const getAssignmentHistory = async (ticketId: number) => {
 
 // ===== FOLLOWER SERVICE =====
 
-export const addFollower = async (ticketId: number, userId: number) => {
+export const addFollower = async (ticketId: number, userId: string) => {
   return await prisma.follower.upsert({
     where: {
       ticket_id_user_id: { ticket_id: ticketId, user_id: userId }
@@ -285,7 +285,7 @@ export const getFollowers = async (ticketId: number) => {
 
 export const createNotification = async (
   ticketId: number,
-  userId: number,
+  userId: string,
   type: string,
   message: string
 ) => {
@@ -299,7 +299,7 @@ export const createNotification = async (
   });
 };
 
-export const getUserNotifications = async (userId: number) => {
+export const getUserNotifications = async (userId: string) => {
   return await prisma.notification.findMany({
     where: { user_id: userId },
     include: { ticket: true },
@@ -316,7 +316,7 @@ export const markNotificationAsRead = async (notificationId: number) => {
 
 // ===== SCOPE SERVICE =====
 
-export const assignScope = async (assigneeId: number, scopeName: string) => {
+export const assignScope = async (assigneeId: string, scopeName: string) => {
   return await prisma.assigneeScope.upsert({
     where: {
       assignee_id_scope_name: { assignee_id: assigneeId, scope_name: scopeName }
@@ -326,36 +326,15 @@ export const assignScope = async (assigneeId: number, scopeName: string) => {
   });
 };
 
-export const getAssigneeScopes = async (assigneeId: number) => {
+export const getAssigneeScopes = async (assigneeId: string) => {
   return await prisma.assigneeScope.findMany({
     where: { assignee_id: assigneeId }
   });
 };
 
-export const removeScope = async (assigneeId: number, scopeName: string) => {
+export const removeScope = async (assigneeId: string, scopeName: string) => {
   return await prisma.assigneeScope.deleteMany({
     where: { assignee_id: assigneeId, scope_name: scopeName }
-  });
-};
-
-// ===== OAUTH SERVICE =====
-
-export const saveOAuthToken = async (
-  userId: number,
-  googleToken: string,
-  refreshToken?: string,
-  expiresAt?: Date
-) => {
-  return await prisma.oAuthToken.upsert({
-    where: { user_id: userId },
-    update: { google_token: googleToken, refresh_token: refreshToken, expires_at: expiresAt },
-    create: { user_id: userId, google_token: googleToken, refresh_token: refreshToken, expires_at: expiresAt }
-  });
-};
-
-export const getOAuthToken = async (userId: number) => {
-  return await prisma.oAuthToken.findUnique({
-    where: { user_id: userId }
   });
 };
 
@@ -439,7 +418,7 @@ export const getTicketStats = async (
 };
 
 export const getAssigneeMetrics = async (
-  assigneeId: number,
+  assigneeId: string,
   days: number = 30
 ) => {
   const startDate = new Date();
@@ -497,12 +476,12 @@ export const getTicketCountByStatuses = async (statusIds: number[]) => {
 };
 
 export const getAverageResolutionTime = async (dateFilter: Date | null) => {
-  const where: any = { 
+  const where: any = {
     status_id: { in: [5, 6] }, // Solved (5) or Failed (6)
     resolved_at: { not: null },
     activated_at: { not: null }
   };
-  
+
   if (dateFilter) {
     where.resolved_at = { ...where.resolved_at, gte: dateFilter };
   }
@@ -528,7 +507,7 @@ export const getAverageResolutionTime = async (dateFilter: Date | null) => {
 
 export const getTopCategories = async (dateFilter: Date | null, limit: number = 5) => {
   const where = dateFilter ? { created_at: { gte: dateFilter } } : {};
-  
+
   const result = await prisma.ticket.groupBy({
     by: ["category_id"],
     where: { ...where, category_id: { not: null } },
@@ -559,7 +538,8 @@ export const getAssigneeWorkloadDistribution = async () => {
     where: { role: { in: ["ASSIGNEE", "ADMIN"] } },
     select: {
       user_id: true,
-      name: true,
+      user_name: true,
+      full_name: true,
       email: true
     }
   });
@@ -575,7 +555,7 @@ export const getAssigneeWorkloadDistribution = async () => {
 
       return {
         assignee_id: assignee.user_id,
-        assignee_name: assignee.name || assignee.email,
+        assignee_name: assignee.user_name ?? assignee.full_name ?? assignee.email,
         active_tickets: activeCount
       };
     })
@@ -604,7 +584,7 @@ export const getCategoryTrendsOverTime = async (startDate: Date, daysNum: number
   tickets.forEach(ticket => {
     const categoryName = ticket.category?.name || "Unknown";
     const dateKey = ticket.created_at.toISOString().split('T')[0]; // YYYY-MM-DD
-    
+
     if (!trends[categoryName]) {
       trends[categoryName] = {};
     }
@@ -617,7 +597,7 @@ export const getCategoryTrendsOverTime = async (startDate: Date, daysNum: number
 // Assignee Performance Functions
 
 export const getTicketsByAssigneeAndStatuses = async (
-  assigneeId: number,
+  assigneeId: string,
   statusIds: number[],
   sortBy: string = "deadline"
 ) => {
@@ -649,7 +629,7 @@ export const getTicketsByAssigneeAndStatuses = async (
 };
 
 export const getTicketCountByAssigneeAndStatus = async (
-  assigneeId: number,
+  assigneeId: string,
   statusId: number,
   dateFilter: Date | null
 ) => {
@@ -666,7 +646,7 @@ export const getTicketCountByAssigneeAndStatus = async (
 };
 
 export const getAssigneeAvgResolutionTime = async (
-  assigneeId: number,
+  assigneeId: string,
   dateFilter: Date | null
 ) => {
   const where: any = {
@@ -700,7 +680,7 @@ export const getAssigneeAvgResolutionTime = async (
 };
 
 export const getAssigneeResolvedByCategory = async (
-  assigneeId: number,
+  assigneeId: string,
   dateFilter: Date | null
 ) => {
   const where: any = {

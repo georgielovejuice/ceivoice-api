@@ -129,7 +129,8 @@ export const me = async (req: Request, res: Response): Promise<void> => {
     res.json({
       user_id: user.user_id,
       email: user.email,
-      name: user.name,
+      user_name: user.user_name,
+      full_name: user.full_name,
       role: user.role,
       is_assignee: user.role === "ASSIGNEE" || user.role === "ADMIN",
       created_at: user.created_at

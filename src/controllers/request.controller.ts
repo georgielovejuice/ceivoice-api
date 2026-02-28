@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import * as dbService from "../services/db.service";
-import type { UserProfile } from "../config/supabase";
+import type { UserProfile } from "../types";
 import * as emailService from "../services/email.service";
 import { aiService } from "../services/ai.service";
 import * as validator from "email-validator";
@@ -58,7 +58,7 @@ export const submitRequest = async (
       aiDraft.title,
       aiDraft.summary,
       selectedCategoryId,
-      1, // Creator: System User
+      null, // Creator: System User
     );
 
     // 6. Update Ticket with AI specifics

@@ -117,33 +117,19 @@ router.get("/google/callback", async (req: Request, res: Response) => {
 
   const supabaseUser = data.user;
   const email = supabaseUser.email ?? "";
-  // Supabase stores the provider's user id in user_metadata.provider_id for
-  // non-email providers, and the Supabase user UUID is always supabaseUser.id.
-  const googleId =
-    (supabaseUser.user_metadata?.provider_id as string | undefined) ??
-    supabaseUser.id;
-  const name =
+  const fullName =
     (supabaseUser.user_metadata?.full_name as string | undefined) ??
     (supabaseUser.user_metadata?.name as string | undefined) ??
     null;
 
   try {
-    // Upsert: find by Google provider id, then by email, else create.
-    let user = await prisma.user.findUnique({ where: { google_id: googleId } });
+    // Find user in public schema by email; create if not found.
+    let user = await prisma.user.findUnique({ where: { email } });
 
     if (!user) {
-      const existing = await prisma.user.findUnique({ where: { email } });
-      if (existing) {
-        // Link the Google account to an existing email/password account.
-        user = await prisma.user.update({
-          where: { email },
-          data: { google_id: googleId }
-        });
-      } else {
-        user = await prisma.user.create({
-          data: { email, name, google_id: googleId, role: "USER" }
-        });
-      }
+      user = await prisma.user.create({
+        data: { email, full_name: fullName, role: "USER" }
+      });
     }
 
     const payload = { user_id: user.user_id, email: user.email, role: user.role };
@@ -165,7 +151,7 @@ router.get("/google/callback", async (req: Request, res: Response) => {
  * GET /api/auth/me
  * Get current authenticated user profile
  * Requires: Valid JWT token in Authorization header (Bearer <token>)
- * Returns: { user_id: number, email: string, name: string, role: string, is_assignee: boolean, created_at: Date }
+ * Returns: { user_id: string, email: string, name: string, role: string, is_assignee: boolean, created_at: Date }
  */
 router.get("/me", authenticate, authController.me);
 

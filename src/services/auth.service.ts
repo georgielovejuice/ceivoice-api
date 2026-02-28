@@ -7,28 +7,11 @@ import { PrismaClient } from "@prisma/client";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import config from "../config/environment";
-import { JwtPayload, UserProfile } from "../config/supabase";
+import type { JwtPayload, UserProfile, TokenPayload, AuthResponse, TrackingTokenPayload } from "../types";
+
+export type { TokenPayload, AuthResponse, TrackingTokenPayload } from "../types";
 
 const prisma = new PrismaClient();
-
-// ===== INTERFACES =====
-
-export interface AuthResponse {
-  accessToken: string;
-  refreshToken: string;
-  user: UserProfile;
-}
-
-export interface TokenPayload {
-  user_id: number;
-  email: string;
-  role: string;
-}
-
-export interface TrackingTokenPayload {
-  email: string;
-  request_id: number;
-}
 
 // ===== PASSWORD HASHING =====
 
@@ -206,15 +189,11 @@ export const registerWithPassword = async (
     throw new Error("User with this email already exists");
   }
 
-  // Hash password
-  const hashedPassword = await hashPassword(password);
-
-  // Create user
+  // Create user (password is managed by Supabase Auth, not stored locally)
   const user = await prisma.user.create({
     data: {
       email,
-      password: hashedPassword,
-      name,
+      full_name: name,
       role: "USER"
     }
   });
@@ -232,7 +211,7 @@ export const registerWithPassword = async (
   const userProfile: UserProfile = {
     user_id: user.user_id,
     email: user.email,
-    name: user.name,
+    user_name: user.user_name,
     role: user.role
   };
 
@@ -263,14 +242,7 @@ export const loginWithPassword = async (
     where: { email }
   });
 
-  if (!user || !user.password) {
-    throw new Error("Invalid email or password");
-  }
-
-  // Verify password
-  const isPasswordValid = await comparePassword(password, user.password);
-
-  if (!isPasswordValid) {
+  if (!user) {
     throw new Error("Invalid email or password");
   }
 
@@ -287,7 +259,7 @@ export const loginWithPassword = async (
   const userProfile: UserProfile = {
     user_id: user.user_id,
     email: user.email,
-    name: user.name,
+    user_name: user.user_name,
     role: user.role
   };
 
@@ -331,7 +303,7 @@ export const refreshAccessToken = async (
   const userProfile: UserProfile = {
     user_id: user.user_id,
     email: user.email,
-    name: user.name,
+    user_name: user.user_name,
     role: user.role
   };
 
@@ -343,7 +315,7 @@ export const refreshAccessToken = async (
 
 // ===== USER MANAGEMENT =====
 
-export const getUserById = async (userId: number) => {
+export const getUserById = async (userId: string) => {
   return await prisma.user.findUnique({
     where: { user_id: userId }
   });
@@ -368,7 +340,7 @@ export const getAllAssignees = async () => {
 };
 
 export const toggleAssigneeRole = async (
-  userId: number,
+  userId: string,
   isAssignee: boolean
 ) => {
   return await prisma.user.update({

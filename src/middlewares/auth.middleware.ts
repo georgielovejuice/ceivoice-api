@@ -8,7 +8,7 @@
 
 import { Request, Response, NextFunction } from "express";
 import { PrismaClient } from "@prisma/client";
-import type { UserProfile } from "../config/supabase";
+import type { UserProfile } from "../types";
 import { verifyToken } from "../services/auth.service";
 
 const prisma = new PrismaClient();
@@ -62,7 +62,7 @@ export const authenticate = async (
     const userProfile: UserProfile = {
       user_id: user.user_id,
       email: user.email,
-      name: user.name,
+      user_name: user.user_name,
       role: user.role
     };
 
@@ -107,7 +107,7 @@ export const authenticateOptional = async (
       const userProfile: UserProfile = {
         user_id: user.user_id,
         email: user.email,
-        name: user.name,
+        user_name: user.user_name,
         role: user.role
       };
       req.user = userProfile;
