@@ -1,17 +1,16 @@
 // ceivoice-api/src/middlewares/auth.middleware.ts
 import { Request, Response, NextFunction } from 'express';
 import { PrismaClient } from '@prisma/client';
-import jwt from 'jsonwebtoken';
+import { createClient } from '@supabase/supabase-js';
 import config from '../config/environment';
 
 const prisma = new PrismaClient();
 
-interface SupabaseJwt {
-  sub: string;
-  email: string;
-  app_role?: string;
-  exp: number;
-}
+const supabaseAdmin = createClient(
+  config.supabase.url,
+  config.supabase.serviceRoleKey,
+  { auth: { autoRefreshToken: false, persistSession: false } }
+);
 
 function extractToken(req: Request): string | null {
   const header = req.headers.authorization;
@@ -26,17 +25,17 @@ export const authenticate = async (req: any, res: Response, next: NextFunction) 
     return;
   }
 
-  let payload: SupabaseJwt;
-  try {
-    payload = jwt.verify(token, config.supabase.jwtSecret, {
-      algorithms: ['HS256'],
-    }) as SupabaseJwt;
-  } catch {
+  // Validate token against Supabase Auth (works with HS256 and ES256)
+  const { data: { user: authUser }, error } = await supabaseAdmin.auth.getUser(token);
+  if (error || !authUser) {
     res.status(401).json({ error: 'Invalid or expired token' });
     return;
   }
 
-  const user = await prisma.user.findUnique({ where: { user_id: payload.sub } });
+  // Decode claims from already-verified JWT (app_role from custom hook)
+  const claims = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString());
+
+  const user = await prisma.user.findUnique({ where: { user_id: authUser.id } });
   if (!user) {
     res.status(401).json({ error: 'User not found' });
     return;
@@ -46,7 +45,7 @@ export const authenticate = async (req: any, res: Response, next: NextFunction) 
     user_id: user.user_id,
     email: user.email,
     user_name: user.user_name,
-    role: payload.app_role ?? user.role,
+    role: claims.app_role ?? user.role,
   };
   next();
 };

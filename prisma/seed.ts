@@ -1,5 +1,4 @@
 import { PrismaClient } from '@prisma/client'
-
 const prisma = new PrismaClient()
 
 async function main() {
@@ -8,7 +7,7 @@ async function main() {
   // ==============================================
   // 1. SETUP LOOKUP DATA
   // ==============================================
-  
+
   // Create Ticket Statuses
   const statuses = [
     { name: 'Draft', step_order: 1, description: 'AI-generated ticket awaiting admin review' },
@@ -19,7 +18,7 @@ async function main() {
     { name: 'Failed', step_order: 6, description: 'Ticket could not be resolved' },
     { name: 'Renew', step_order: 7, description: 'Ticket reopened after being marked solved/failed' }
   ]
-  
+
   for (const status of statuses) {
     await prisma.ticketStatus.upsert({
       where: { name: status.name },
@@ -67,7 +66,7 @@ async function main() {
   const user1 = await prisma.user.create({
     data: { email: 'john.doe@example.com', name: 'John Doe', role: 'USER' },
   })
-  
+
   const user2 = await prisma.user.create({
     data: { email: 'jane.smith@example.com', name: 'Jane Smith', role: 'USER' },
   })
@@ -83,7 +82,7 @@ async function main() {
   const newStatus = await prisma.ticketStatus.findUnique({ where: { name: 'New' } })
   const assignedStatus = await prisma.ticketStatus.findUnique({ where: { name: 'Assigned' } })
   const solvingStatus = await prisma.ticketStatus.findUnique({ where: { name: 'Solving' } })
-  
+
   // Get category ID
   const techSupportCategory = await prisma.category.findUnique({ where: { name: 'Technical Support' } })
 

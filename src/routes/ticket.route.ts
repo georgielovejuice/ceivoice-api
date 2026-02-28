@@ -7,6 +7,9 @@ const router = Router();
 // Protected routes - Authenticated users only
 router.use(authenticate);
 
+// Get tickets created by the logged-in user
+router.get("/mine", ticketController.getMyTickets);
+
 // Get specific ticket
 router.get("/:id", ticketController.getTicketById);
 

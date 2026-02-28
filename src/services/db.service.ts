@@ -79,6 +79,18 @@ export const getTicketsByStatus = async (statusId: number) => {
   });
 };
 
+export const getTicketsByCreator = async (userId: string) => {
+  return await prisma.ticket.findMany({
+    where: { creator_user_id: userId },
+    include: {
+      status: true,
+      category: true,
+      assignee: true
+    },
+    orderBy: { created_at: "desc" }
+  });
+};
+
 export const getTicketsByAssignee = async (assigneeId: string) => {
   return await prisma.ticket.findMany({
     where: {

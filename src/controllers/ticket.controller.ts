@@ -293,6 +293,19 @@ export const getTicketById = async (
   }
 };
 
+export const getMyTickets = async (
+  req: any,
+  res: Response
+): Promise<void> => {
+  try {
+    const tickets = await dbService.getTicketsByCreator(req.user.user_id);
+    res.json(tickets);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 export const getTicketsByStatus = async (
   req: Request,
   res: Response
