@@ -36,11 +36,13 @@ export const sendConfirmationEmail = async (
 ): Promise<boolean> => {
   try {
     if (useQueue) {
-      return await queueEmail({
+      const queued = await queueEmail({
         type: "confirmation",
         email,
         data: { trackingId, ticketId },
       });
+      // Queue unavailable — fall through to direct Resend
+      if (queued) return true;
     }
 
     const htmlContent = await render(

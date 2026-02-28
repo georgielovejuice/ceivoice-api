@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
 import * as dbService from "../services/db.service";
-import type { UserProfile } from "../types";
 import * as emailService from "../services/email.service";
 import type { AiTicketDraft } from "../services/ai.service";
 // import { aiService } from "../services/ai.service"; // TODO: uncomment when AI is ready
@@ -35,7 +34,7 @@ export const submitRequest = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const { email, message } = req.body;
+    const { email, message, user_id = null } = req.body;
 
     if (!email || !validator.validate(email)) {
       res.status(400).json({ error: "Invalid email format" });
@@ -73,7 +72,7 @@ export const submitRequest = async (
       aiDraft.title,
       aiDraft.summary,
       selectedCategoryId,
-      null,
+      user_id,
     );
 
     const solutionText = Array.isArray(aiDraft.suggested_solution)
