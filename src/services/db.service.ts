@@ -67,6 +67,18 @@ export const getDraftTickets = async () => {
   });
 };
 
+export const getAllTickets = async () => {
+  return await prisma.ticket.findMany({
+    include: {
+      status: true,
+      category: true,
+      assignee: true,
+      creator: true,
+    },
+    orderBy: { created_at: "desc" }
+  });
+};
+
 export const getTicketsByStatus = async (statusId: number) => {
   return await prisma.ticket.findMany({
     where: { status_id: statusId },

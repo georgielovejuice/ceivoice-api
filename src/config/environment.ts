@@ -44,7 +44,7 @@ supabase: {
   // Email Configuration (Resend)
   email: {
     resendApiKey: process.env.RESEND_API_KEY || "",
-    fromEmail: process.env.FROM_EMAIL || "noreply@ceivoice.com",
+    fromEmail: process.env.FROM_EMAIL || "noreply@ceivoice.app",
     frontendUrl: process.env.FRONTEND_URL || "http://localhost:3000"
   },
 

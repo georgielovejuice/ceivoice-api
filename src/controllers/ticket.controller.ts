@@ -311,10 +311,10 @@ export const getTicketsByStatus = async (
   res: Response
 ): Promise<void> => {
   try {
-    const { status } = req.query;
+    const { status } = req.params;
 
     if (!status) {
-      res.status(400).json({ error: "Status query parameter required" });
+      res.status(400).json({ error: "Status parameter required" });
       return;
     }
 
@@ -323,7 +323,7 @@ export const getTicketsByStatus = async (
       "Draft": 1, "New": 2, "Assigned": 3, "Solving": 4,
       "Solved": 5, "Failed": 6, "Renew": 7
     };
-    const statusId = statusMap[status as string];
+    const statusId = statusMap[status];
 
     if (!statusId) {
       res.status(400).json({ error: "Invalid status value" });
