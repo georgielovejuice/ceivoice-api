@@ -391,27 +391,6 @@ export const removeScopeById = async (scopeId: number) => {
   });
 };
 
-// ===== OAUTH SERVICE =====
-
-export const saveOAuthToken = async (
-  userId: number,
-  googleToken: string,
-  refreshToken?: string,
-  expiresAt?: Date
-) => {
-  return await prisma.oAuthToken.upsert({
-    where: { user_id: userId },
-    update: { google_token: googleToken, refresh_token: refreshToken, expires_at: expiresAt },
-    create: { user_id: userId, google_token: googleToken, refresh_token: refreshToken, expires_at: expiresAt }
-  });
-};
-
-export const getOAuthToken = async (userId: number) => {
-  return await prisma.oAuthToken.findUnique({
-    where: { user_id: userId }
-  });
-};
-
 // ===== TICKET REQUEST SERVICE =====
 
 export const linkRequestToTicket = async (
@@ -803,7 +782,8 @@ export const mergeTickets = async (parentTicketId: number, childTicketIds: numbe
     childTicketIds.map((childId) =>
       prisma.ticket.update({
         where: { ticket_id: childId },
-        data: { parent_ticket_id: parentTicketId }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        data: { parent_ticket_id: parentTicketId } as any
       })
     )
   );
@@ -814,6 +794,7 @@ export const mergeTickets = async (parentTicketId: number, childTicketIds: numbe
 export const unmergeTicket = async (childTicketId: number) => {
   return await prisma.ticket.update({
     where: { ticket_id: childTicketId },
-    data: { parent_ticket_id: null }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    data: { parent_ticket_id: null } as any
   });
 };
