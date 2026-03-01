@@ -56,8 +56,7 @@ export const updateTicket = async (ticketId: number, data: any) => {
 
 export const getDraftTickets = async () => {
   return await prisma.ticket.findMany({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    where: { status_id: 1, parent_ticket_id: null } as any, // 1 = Draft, exclude merged children
+    where: { status_id: 1, parent_ticket_id: null }, // 1 = Draft, exclude merged children
     include: {
       status: true,
       category: true,
@@ -796,11 +795,9 @@ export const mergeTickets = async (parentTicketId: number, childTicketIds: numbe
         });
       }
       // Mark child as merged under parent
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const updated = await tx.ticket.update({
         where: { ticket_id: childId },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        data: { parent_ticket_id: parentTicketId } as any,
+        data: { parent_ticket_id: parentTicketId },
       });
       merged.push(updated);
     }
@@ -811,7 +808,6 @@ export const mergeTickets = async (parentTicketId: number, childTicketIds: numbe
 export const unmergeTicket = async (childTicketId: number) => {
   return await prisma.ticket.update({
     where: { ticket_id: childTicketId },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    data: { parent_ticket_id: null } as any
+    data: { parent_ticket_id: null }
   });
 };
