@@ -15,36 +15,14 @@ const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 const FROM_EMAIL = process.env.FROM_EMAIL || "noreply@mail.ceivoice.app";
 
 /**
- * Queue email for processing via RabbitMQ
- */
-const queueEmail = async (payload: EmailQueuePayload): Promise<boolean> => {
-  const isQueued = await queueService.publishEmail(payload);
-  if (!isQueued) {
-    console.warn(`Failed to queue email for ${payload.email}`);
-  }
-  return isQueued;
-};
-
-/**
  * Send confirmation email for new requests
  */
 export const sendConfirmationEmail = async (
   email: string,
   trackingId: string,
-  ticketId: number,
-  useQueue: boolean = true
+  ticketId: number
 ): Promise<boolean> => {
   try {
-    if (useQueue) {
-      const queued = await queueEmail({
-        type: "confirmation",
-        email,
-        data: { trackingId, ticketId },
-      });
-      // Queue unavailable — fall through to direct Resend
-      if (queued) return true;
-    }
-
     const htmlContent = await render(
       React.createElement(ConfirmationEmail, {
         email,
@@ -86,18 +64,9 @@ export const sendStatusChangeEmail = async (
   email: string,
   ticketId: number,
   newStatus: string,
-  trackingId: string,
-  useQueue: boolean = true
+  trackingId: string
 ): Promise<boolean> => {
   try {
-    if (useQueue) {
-      return await queueEmail({
-        type: "status_change",
-        email,
-        data: { ticketId, newStatus, trackingId },
-      });
-    }
-
     const htmlContent = await render(
       React.createElement(StatusChangeEmail, {
         ticketId,
@@ -139,18 +108,9 @@ export const sendCommentNotificationEmail = async (
   email: string,
   ticketId: number,
   commenterName: string,
-  trackingId: string,
-  useQueue: boolean = true
+  trackingId: string
 ): Promise<boolean> => {
   try {
-    if (useQueue) {
-      return await queueEmail({
-        type: "comment_notification",
-        email,
-        data: { ticketId, commenterName, trackingId },
-      });
-    }
-
     const htmlContent = await render(
       React.createElement(CommentNotificationEmail, {
         ticketId,
@@ -192,18 +152,9 @@ export const sendAssignmentNotificationEmail = async (
   email: string,
   ticketId: number,
   ticketTitle: string,
-  assigneeName: string,
-  useQueue: boolean = true
+  assigneeName: string
 ): Promise<boolean> => {
   try {
-    if (useQueue) {
-      return await queueEmail({
-        type: "assignment_notification",
-        email,
-        data: { ticketId, ticketTitle, assigneeName },
-      });
-    }
-
     const htmlContent = await render(
       React.createElement(AssignmentNotificationEmail, {
         ticketId,
@@ -251,42 +202,19 @@ export const processQueuedEmails = async (): Promise<void> => {
 
       switch (type) {
         case "confirmation":
-          await sendConfirmationEmail(
-            email,
-            data.trackingId,
-            data.ticketId,
-            false
-          );
+          await sendConfirmationEmail(email, data.trackingId, data.ticketId);
           break;
 
         case "status_change":
-          await sendStatusChangeEmail(
-            email,
-            data.ticketId,
-            data.newStatus,
-            data.trackingId,
-            false
-          );
+          await sendStatusChangeEmail(email, data.ticketId, data.newStatus, data.trackingId);
           break;
 
         case "comment_notification":
-          await sendCommentNotificationEmail(
-            email,
-            data.ticketId,
-            data.commenterName,
-            data.trackingId,
-            false
-          );
+          await sendCommentNotificationEmail(email, data.ticketId, data.commenterName, data.trackingId);
           break;
 
         case "assignment_notification":
-          await sendAssignmentNotificationEmail(
-            email,
-            data.ticketId,
-            data.ticketTitle,
-            data.assigneeName,
-            false
-          );
+          await sendAssignmentNotificationEmail(email, data.ticketId, data.ticketTitle, data.assigneeName);
           break;
 
         default:

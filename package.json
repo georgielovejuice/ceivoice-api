@@ -4,7 +4,7 @@
   "description": "CeiVoice API Backend - Merged TypeScript Express.js Application",
   "main": "dist/server.ts",
   "scripts": {
-    "dev": "pnpm exec nodemon --exec ts-node src/server.ts",
+    "dev": "pnpm exec nodemon --watch src --ext ts,json --exec ts-node src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "start:prod": "pnpm run build && pnpm start",

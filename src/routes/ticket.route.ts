@@ -11,7 +11,7 @@ router.use(authenticate);
 router.get("/mine", ticketController.getMyTickets);
 
 // Get specific ticket
-router.get("/:id", ticketController.getTicketById);
+router.get("/id/:id", ticketController.getTicketById);
 
 // Get tickets by status
 router.get("/status/:status", ticketController.getTicketsByStatus);
@@ -20,22 +20,22 @@ router.get("/status/:status", ticketController.getTicketsByStatus);
 router.get("/", authorize(["ADMIN"]), async (req, res) => {
   return ticketController.getDraftTickets(req, res);
 });
-router.put("/:id", authorize(["ADMIN"]), ticketController.editDraftTicket);
-router.put("/:id/deadline", authorize(["ADMIN"]), ticketController.setDeadline);
+router.put("/id/:id", authorize(["ADMIN"]), ticketController.editDraftTicket);
+router.put("/id/:id/deadline", authorize(["ADMIN"]), ticketController.setDeadline);
 
 // Ticket status updates - Admin only
-router.patch("/:id/status", authorize(["ADMIN"]), ticketController.updateStatus);
+router.patch("/id/:id/status", authorize(["ADMIN"]), ticketController.updateStatus);
 
 // Assignment management - Assignee and Admin
-router.post("/:id/assign", authorize(["ASSIGNEE", "ADMIN"]), ticketController.assignTicket);
-router.post("/:id/unassign", authorize(["ASSIGNEE", "ADMIN"]), ticketController.unassignTicket);
+router.post("/id/:id/assign", authorize(["ASSIGNEE", "ADMIN"]), ticketController.assignTicket);
+router.post("/id/:id/unassign", authorize(["ASSIGNEE", "ADMIN"]), ticketController.unassignTicket);
 
 // Comments
-router.post("/:id/comments", ticketController.addComment);
-router.get("/:id/comments", ticketController.getComments);
+router.post("/id/:id/comments", ticketController.addComment);
+router.get("/id/:id/comments", ticketController.getComments);
 
 // Followers
-router.post("/:id/followers", ticketController.addFollower);
-router.get("/:id/followers", ticketController.getFollowers);
+router.post("/id/:id/followers", ticketController.addFollower);
+router.get("/id/:id/followers", ticketController.getFollowers);
 
 export default router;

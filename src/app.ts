@@ -24,6 +24,12 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// ===== REQUEST LOGGER (debug) =====
+app.use((req, _res, next) => {
+  console.log(`[Request] ${req.method} ${req.path} | auth: ${req.headers.authorization ? 'present' : 'missing'}`);
+  next();
+});
+
 // ===== ROUTES =====
 app.use("/api/requests", requestRoutes);
 app.use("/api/tickets", ticketRoutes);
