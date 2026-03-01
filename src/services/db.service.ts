@@ -56,7 +56,8 @@ export const updateTicket = async (ticketId: number, data: any) => {
 
 export const getDraftTickets = async () => {
   return await prisma.ticket.findMany({
-    where: { status_id: 1 }, // 1 = Draft
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    where: { status_id: 1, parent_ticket_id: null } as any, // 1 = Draft, exclude merged children
     include: {
       status: true,
       category: true,
@@ -778,17 +779,33 @@ export const getAllActiveCategories = async () => {
 // ===== MERGE/UNMERGE SERVICE =====
 
 export const mergeTickets = async (parentTicketId: number, childTicketIds: number[]) => {
-  const merged = await Promise.all(
-    childTicketIds.map((childId) =>
-      prisma.ticket.update({
+  return await prisma.$transaction(async (tx) => {
+    const merged = [];
+    for (const childId of childTicketIds) {
+      // Move all requests from child to parent
+      const childRequests = await tx.ticketRequest.findMany({ where: { ticket_id: childId } });
+      for (const cr of childRequests) {
+        // Upsert to avoid duplicate if parent already has this request
+        await tx.ticketRequest.upsert({
+          where: { ticket_id_request_id: { ticket_id: parentTicketId, request_id: cr.request_id } },
+          create: { ticket_id: parentTicketId, request_id: cr.request_id },
+          update: {},
+        });
+        await tx.ticketRequest.delete({
+          where: { ticket_id_request_id: { ticket_id: childId, request_id: cr.request_id } },
+        });
+      }
+      // Mark child as merged under parent
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const updated = await tx.ticket.update({
         where: { ticket_id: childId },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        data: { parent_ticket_id: parentTicketId } as any
-      })
-    )
-  );
-
-  return merged;
+        data: { parent_ticket_id: parentTicketId } as any,
+      });
+      merged.push(updated);
+    }
+    return merged;
+  });
 };
 
 export const unmergeTicket = async (childTicketId: number) => {
