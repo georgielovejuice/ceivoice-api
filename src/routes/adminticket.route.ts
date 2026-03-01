@@ -22,6 +22,9 @@ router.get("/active", adminController.listActiveTickets);
 router.post("/:id/assign", adminController.assignTicketToUser);
 router.get("/assignees", adminController.getAssigneeList);
 
+// Categories
+router.get("/categories", adminController.listCategories);
+
 // Statistics
 router.get("/stats", adminController.getTicketStats);
 

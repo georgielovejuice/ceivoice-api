@@ -314,14 +314,14 @@ export const getUserByEmail = async (email: string) => {
 };
 
 // Get user by ID (for reassignment notifications)
-export const getUserById = async (userId: number) => {
+export const getUserById = async (userId: string) => {
   return await prisma.user.findUnique({
     where: { user_id: userId }
   });
 };
 
 // Update user role (for admin role management)
-export const updateUserRole = async (userId: number, role: string) => {
+export const updateUserRole = async (userId: string, role: string) => {
   return await prisma.user.update({
     where: { user_id: userId },
     data: { role }

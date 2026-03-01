@@ -52,10 +52,7 @@ export const submitRequest = async (
       return;
     }
 
-    // 1. Create the Raw Request with authenticated user email
-    const request = await dbService.createRequest(userEmail, message);
-    // 1. Save the raw request immediately
-    const request = await dbService.createRequest(email, message);
+    const aiDraft = await dbService.createRequest(email, message);
 
     // 2. Fetch required lookup data (Fast DB calls)
     const allCategories = await dbService.getAllActiveCategories();
@@ -77,7 +74,6 @@ export const submitRequest = async (
       userId, // Creator: Authenticated user
     );
 
-    // 6. Update Ticket with AI specifics
     const solutionText = Array.isArray(aiDraft.suggested_solution)
       ? "- " + aiDraft.suggested_solution.join("\n- ")
       : aiDraft.suggested_solution;
@@ -87,10 +83,6 @@ export const submitRequest = async (
       priority: aiDraft.priority,
       assignee_user_id: aiDraft.assignee_id // <--- SAVE ASSIGNEE
     });
-      "AI is analyzing your request...", // Temporary Title
-      "AI is generating the summary and suggested solution...", // Temporary Summary
-      defaultCategory,
-      null, // Assignee
     );
 
     // Link them together

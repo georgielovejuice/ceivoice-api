@@ -166,6 +166,21 @@ export const approveDraft = async (
   }
 };
 
+// ===== CATEGORIES =====
+
+export const listCategories = async (
+  _req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const categories = await dbService.getAllCategories();
+    res.json(categories);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch categories" });
+  }
+};
+
 // ===== ALL TICKETS =====
 
 export const listAllTickets = async (
@@ -399,8 +414,8 @@ export const unmergeTicket = async (
 
     // Get child ticket
     const childTicket = await dbService.getTicketById(childTicketId);
-    if (!childTicket || !childTicket.parent_ticket_id) {
-      res.status(404).json({ error: "Ticket is not a merged child" });
+    if (!childTicket) {
+      res.status(404).json({ error: "Ticket not found" });
       return;
     }
 
@@ -461,7 +476,7 @@ export const updateUserRole = async (
       message: "User role updated successfully",
       user_id: updatedUser.user_id,
       email: updatedUser.email,
-      name: updatedUser.name,
+      name: updatedUser.full_name,
       role: updatedUser.role
     });
   } catch (err) {
