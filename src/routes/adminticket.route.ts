@@ -36,6 +36,9 @@ router.put("/notifications/:id/read", adminController.markNotificationAsRead);
 router.post("/:id/merge", adminController.mergeTickets);
 router.post("/:id/unmerge", adminController.unmergeTicket);
 
+// Unlink request from ticket (ST005)
+router.delete("/tickets/:ticketId/requests/:requestId", adminController.unlinkRequest);
+
 // User role management (EP06-ST001)
 router.patch("/users/:userId/role", adminController.updateUserRole);
 

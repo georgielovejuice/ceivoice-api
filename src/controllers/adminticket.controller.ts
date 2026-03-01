@@ -602,3 +602,70 @@ export const removeAssigneeScope = async (
     }
   }
 };
+
+// ===== UNLINK REQUEST FROM TICKET =====
+// Removes a request from a consolidated draft and creates a new standalone Draft for it.
+
+export const unlinkRequest = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    if (!req.user || (req.user as UserProfile).role !== "ADMIN") {
+      res.status(403).json({ error: "Forbidden - Admin access required" });
+      return;
+    }
+
+    const ticketId = parseInt(req.params.ticketId, 10);
+    const requestId = parseInt(req.params.requestId, 10);
+
+    // Verify the ticket exists and is a Draft
+    const ticket = await dbService.getTicketById(ticketId);
+    if (!ticket) {
+      res.status(404).json({ error: "Ticket not found" });
+      return;
+    }
+    if (ticket.status_id !== 1) {
+      res.status(400).json({ error: "Can only unlink requests from Draft tickets" });
+      return;
+    }
+
+    // Must have more than one request linked (can't leave ticket with zero)
+    if (ticket.ticket_requests.length <= 1) {
+      res.status(400).json({ error: "Cannot unlink the only request from a ticket" });
+      return;
+    }
+
+    const linkedRequest = ticket.ticket_requests.find(
+      (tr) => tr.request?.request_id === requestId
+    );
+    if (!linkedRequest?.request) {
+      res.status(404).json({ error: "Request not linked to this ticket" });
+      return;
+    }
+
+    // Remove the link
+    await dbService.unlinkRequestFromTicket(ticketId, requestId);
+
+    // Create a new Draft ticket for the unlinked request
+    const newTicket = await dbService.createTicket(
+      linkedRequest.request.message?.split("\n")[0].replace(/^Title:\s*/i, "").slice(0, 100) || "New Support Request",
+      linkedRequest.request.message?.slice(0, 300) || "",
+      ticket.category_id ?? 1,
+      null
+    );
+
+    // Link the request to the new draft
+    await dbService.linkRequestToTicket(newTicket.ticket_id, requestId);
+
+    res.json({
+      message: "Request unlinked successfully",
+      new_ticket_id: newTicket.ticket_id,
+      original_ticket_id: ticketId,
+    });
+  } catch (err) {
+    const error = err as Error;
+    console.error(err);
+    res.status(500).json({ error: error.message });
+  }
+};
