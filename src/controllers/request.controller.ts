@@ -3,13 +3,18 @@ import * as dbService from "../services/db.service";
 import * as emailService from "../services/email.service";
 import { aiService } from "../services/ai.service";
 
-// ===== SUBMIT REQUEST =====
-
-import type { AiTicketDraft } from "../services/ai.service";
-// import { aiService } from "../services/ai.service"; // TODO: uncomment when AI is ready
 import * as validator from "email-validator";
 import jwt from "jsonwebtoken";
 import config from "../config/environment";
+
+interface AiTicketDraft {
+  title: string;
+  category: string;
+  summary: string;
+  suggested_solution: string | string[];
+  priority: string;
+  assignee_id: string | null;
+}
 
 // ---------------------------------------------------------------------------
 // Stub draft — used until the AI service is enabled.
@@ -52,26 +57,29 @@ export const submitRequest = async (
       return;
     }
 
-    const aiDraft = await dbService.createRequest(email, message);
+    // 1. Persist the raw user request
+    const newRequest = await dbService.createRequest(email, message);
 
-    // 2. Fetch required lookup data (Fast DB calls)
+    // 2. Fetch lookup data for ticket creation
     const allCategories = await dbService.getAllActiveCategories();
-    const allAgents = await dbService.getAllAssignees();
+    const allAgents     = await dbService.getAllAssignees();
 
-    // Fallback category while AI works
-    let defaultCategory = allCategories.find((c) => c.name === "General")?.category_id;
-    if (!defaultCategory) {
-      const createdDefault = await dbService.getOrCreateCategory("General");
-      defaultCategory = createdDefault.category_id;
+    // 3. Resolve default category (fallback to "General")
+    let defaultCategoryId = allCategories.find((c) => c.name === "General")?.category_id;
+    if (!defaultCategoryId) {
+      const created = await dbService.getOrCreateCategory("General");
+      defaultCategoryId = created.category_id;
     }
 
-    // 5. Create the Ticket Draft with authenticated user as creator
-    // 3. Create the placeholder ticket immediately
+    // 4. Generate a quick synchronous draft (AI will overwrite this asynchronously)
+    const aiDraft = buildBasicDraft(message, allCategories.map((c) => c.name));
+
+    // 5. Create the placeholder Draft ticket immediately
     const ticket = await dbService.createTicket(
       aiDraft.title,
       aiDraft.summary,
-      selectedCategoryId,
-      userId, // Creator: Authenticated user
+      defaultCategoryId,
+      user_id,
     );
 
     const solutionText = Array.isArray(aiDraft.suggested_solution)
@@ -80,35 +88,31 @@ export const submitRequest = async (
 
     await dbService.updateTicket(ticket.ticket_id, {
       suggested_solution: solutionText,
-      priority: aiDraft.priority,
-      assignee_user_id: aiDraft.assignee_id // <--- SAVE ASSIGNEE
+      assignee_user_id: aiDraft.assignee_id,
     });
-    );
 
-    // Link them together
-    await dbService.linkRequestToTicket(ticket.ticket_id, request.request_id);
+    // 6. Link request → ticket
+    await dbService.linkRequestToTicket(ticket.ticket_id, newRequest.request_id);
 
-    // 4. FIRE AND FORGET THE AI! (🐢 SLOW PATH)
-    // We pass the lookup data so the AI service doesn't have to query the DB again
+    // 7. Fire-and-forget full AI enrichment (slow path — moves ticket to Draft with AI content)
     aiService.processTicketFull(
       ticket.ticket_id,
       message,
-      allCategories.map(c => c.name),
-      allAgents
-    ).catch((err: any) => console.error("❌ Background AI Worker failed:", err));
+      allCategories.map((c) => c.name),
+      allAgents,
+    ).catch((err: unknown) => console.error("❌ Background AI Worker failed:", err));
 
-    // Fire and forget email
+    // 8. Fire-and-forget confirmation email
     emailService
-      .sendConfirmationEmail(email, request.tracking_id, ticket.ticket_id)
+      .sendConfirmationEmail(email, newRequest.tracking_id, ticket.ticket_id)
       .catch((err) => console.error("Failed to send confirmation email:", err));
 
-    // 5. RETURN INSTANTLY TO THE USER (Should take < 100ms)
+    // 9. Return instantly to the user
     res.status(201).json({
       message: "Request submitted successfully. AI is currently classifying and assigning your ticket.",
       ticket_id: ticket.ticket_id,
-      tracking_id: request.tracking_id,
+      tracking_id: newRequest.tracking_id,
       status: "Draft",
-      // We no longer return the ai_analysis here because the user didn't wait for it!
     });
   } catch (err) {
     const error = err as Error;
@@ -187,7 +191,6 @@ export const getAllRequests = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const { page = 1, limit = 20 } = req.query;
     res.json({
       message: "Pagination implementation required",
       hint: "Use /api/requests/track/:tracking_id to get request details",

@@ -384,7 +384,7 @@ export const assignTicket = async (
           assignee.email,
           ticketId,
           ticket.title || `Ticket #${ticketId}`,
-          assignee.name || "Support Team"
+          assignee.full_name || assignee.user_name || "Support Team"
         );
       }
     } catch (err) {
