@@ -4,18 +4,6 @@
  */
 
 export const config = {
-  // JWT Configuration
-  jwt: {
-    secret: process.env.JWT_SECRET || "your-secret-key-change-in-production",
-    accessTokenExpiry: process.env.JWT_ACCESS_TOKEN_EXPIRY || "7d",
-    refreshTokenExpiry: process.env.JWT_REFRESH_TOKEN_EXPIRY || "30d",
-    issuer: "ceivoice-api",
-    audience: "ceivoice-clients"
-  },
-
-  // JWT algorithm list (used when verifying tokens)
-  jwtAlgorithms: ["HS256"] as string[],
-
   // Supabase Configuration (OAuth server)
 supabase: {
   url: process.env.SUPABASE_URL || "",
@@ -44,7 +32,7 @@ supabase: {
   // Email Configuration (Resend)
   email: {
     resendApiKey: process.env.RESEND_API_KEY || "",
-    fromEmail: process.env.FROM_EMAIL || "noreply@ceivoice.app",
+    fromEmail: process.env.FROM_EMAIL || "noreply@mail.ceivoice.app",
     frontendUrl: process.env.FRONTEND_URL || "http://localhost:3000"
   },
 
