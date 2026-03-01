@@ -310,6 +310,37 @@ export const getMyTickets = async (
   }
 };
 
+export const getAssignedTickets = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+    const userId = (req.user as UserProfile).user_id;
+    const tickets = await dbService.getTicketsByAssignee(userId);
+    res.json(tickets);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const listAssignees = async (
+  _req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const assignees = await dbService.getAllAssignees();
+    res.json(assignees);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 export const getTicketsByStatus = async (
   req: Request,
   res: Response

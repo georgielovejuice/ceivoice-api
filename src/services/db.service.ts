@@ -39,8 +39,9 @@ export const getTicketById = async (ticketId: number) => {
       category: true,
       creator: true,
       assignee: true,
-      comments: { include: { user: true } },
-      status_history: { include: { new_status: true, changed_by: true } },
+      comments: { include: { user: true }, orderBy: { created_at: 'asc' as const } },
+      status_history: { include: { old_status: true, new_status: true, changed_by: true }, orderBy: { changed_at: 'asc' as const } },
+      assignment_history: { include: { old_assignee: true, new_assignee: true, changed_by: true }, orderBy: { changed_at: 'asc' as const } },
       followers: { include: { user: true } },
       ticket_requests: { include: { request: true } }
     }
