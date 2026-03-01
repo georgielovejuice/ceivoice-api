@@ -89,8 +89,8 @@ model Ticket {
   suggested_solution    String?
   status_id             Int?
   category_id           Int?
-  creator_user_id       Int?
-  assignee_user_id      Int?
+  creator_user_id       String?             @db.Uuid
+  assignee_user_id      String?             @db.Uuid
   parent_ticket_id      Int?
   created_at            DateTime            @default(now())
   activated_at          DateTime?

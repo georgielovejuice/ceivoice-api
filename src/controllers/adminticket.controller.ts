@@ -10,7 +10,7 @@ export const listDrafts = async (
   res: Response
 ): Promise<void> => {
   try {
-    if (!req.user || (req.user as UserProfile).role !== "admin") {
+    if (!req.user || (req.user as UserProfile).role !== "ADMIN") {
       res.status(403).json({ error: "Forbidden - Admin access required" });
       return;
     }
@@ -111,8 +111,12 @@ export const approveDraft = async (
     const draftStatusId = 1;
     const newStatusId = 2;
 
-    // Update status to New (2)
-    await dbService.updateTicket(ticketId, { status_id: newStatusId });
+    // Update status to New (2) with activation metadata
+    await dbService.updateTicket(ticketId, {
+      status_id: newStatusId,
+      activated_at: new Date(),
+      activated_by_id: (req.user as UserProfile).user_id
+    });
 
     // Record status history
     await dbService.createStatusHistory(

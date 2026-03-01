@@ -160,8 +160,12 @@ export const activateDraftTicket = async (
     const draftStatusId = 1;
     const newStatusId = 2;
 
-    // Update ticket status to New
-    await dbService.updateTicket(ticketId, { status_id: newStatusId });
+    // Update ticket status to New with activation metadata
+    await dbService.updateTicket(ticketId, {
+      status_id: newStatusId,
+      activated_at: new Date(),
+      activated_by_id: adminUserId
+    });
 
     // Record status history
     await dbService.createStatusHistory(
@@ -373,8 +377,10 @@ export const assignTicket = async (
       (req.user as UserProfile).user_id
     );
 
-    // Update ticket status to Assigned (status_id: 3)
-    await dbService.updateTicket(ticketId, { status_id: 3 });
+    // Only move to Assigned (3) if ticket is currently New (2)
+    if (ticket.status_id === 2) {
+      await dbService.updateTicket(ticketId, { status_id: 3 });
+    }
 
     // Send reassignment notification email (EP04-ST004/ST005)
     try {

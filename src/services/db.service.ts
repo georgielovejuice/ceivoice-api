@@ -144,8 +144,7 @@ export const getAllCategories = async () => {
 
 export const getAllAssignees = async () => {
   return await prisma.user.findMany({
-    // 👇 Updated to include the lowercase versions matching your Supabase constraint
-    where: { role: { in: ["assignee", "admin", "ASSIGNEE", "ADMIN"] } },
+    where: { role: { in: ["ASSIGNEE", "ADMIN"] } },
     include: {
       scopes: true,
       assigned_tickets: {
@@ -199,7 +198,8 @@ export const addComment = async (
     data: {
       ticket_id: ticketId,
       user_id: userId,
-      content
+      content,
+      visibility: isInternal ? "PRIVATE" : "PUBLIC"
     },
     include: { user: true }
   });
@@ -215,7 +215,7 @@ export const getTicketComments = async (ticketId: number) => {
 
 export const getPublicComments = async (ticketId: number) => {
   return await prisma.comment.findMany({
-    where: { ticket_id: ticketId },
+    where: { ticket_id: ticketId, visibility: "PUBLIC" },
     include: { user: true },
     orderBy: { created_at: "asc" }
   });
