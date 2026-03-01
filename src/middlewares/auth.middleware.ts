@@ -41,11 +41,14 @@ export const authenticate = async (req: any, res: Response, next: NextFunction) 
     return;
   }
 
+  const rawRole = claims.app_role ?? user.role ?? 'user';
+  const normalizedRole = rawRole.toUpperCase();
+  console.debug('[Auth] user_id:', user.user_id, '| db role:', user.role, '| claims.app_role:', claims.app_role, '| resolved role:', normalizedRole);
   req.user = {
     user_id: user.user_id,
     email: user.email,
     user_name: user.user_name,
-    role: claims.app_role ?? user.role,
+    role: normalizedRole,
   };
   next();
 };

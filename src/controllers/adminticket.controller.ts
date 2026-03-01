@@ -10,7 +10,7 @@ export const listDrafts = async (
   res: Response
 ): Promise<void> => {
   try {
-    if (!req.user || (req.user as UserProfile).role !== "ADMIN") {
+    if (!req.user || (req.user as UserProfile).role !== "admin") {
       res.status(403).json({ error: "Forbidden - Admin access required" });
       return;
     }
