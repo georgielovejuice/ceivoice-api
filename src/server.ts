@@ -1,10 +1,9 @@
 import "dotenv/config";
 import app from "./app";
-import { queueService } from './services/queue.service';
 
 const PORT = process.env.PORT || 5000;
 
-const server = app.listen(PORT, async () => {
+const server = app.listen(PORT, () => {
   console.log(`
 ╔════════════════════════════════════════════════════════════╗
 ║          🎤 CeiVoice API Backend - Server Started          ║
@@ -16,14 +15,6 @@ const server = app.listen(PORT, async () => {
 ║                                                            ║
 ╚════════════════════════════════════════════════════════════╝
   `);
-
-  // 🔌 Initialize the RabbitMQ connection
-  try {
-    await queueService.connect();
-    console.log('✅ Connected to RabbitMQ Queue');
-  } catch (error) {
-    console.error('⚠️ Could not connect to RabbitMQ. Emails will not send.', error instanceof Error ? error.message : error);
-  }
 });
 
 // Graceful shutdown

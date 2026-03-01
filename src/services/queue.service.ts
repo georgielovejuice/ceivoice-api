@@ -54,7 +54,7 @@ class QueueService {
   async publishEmail(payload: EmailQueuePayload): Promise<boolean> {
     try {
       if (!this.channel) {
-        throw new Error("Channel not initialized. Call connect() first.");
+        return false; // RabbitMQ not connected — skip queue, let caller fall through
       }
 
       const message = Buffer.from(JSON.stringify(payload));
