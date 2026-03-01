@@ -445,7 +445,7 @@ export const updateUserRole = async (
       return;
     }
 
-    const userId = parseInt(req.params.userId, 10);
+    const userId = req.params.userId;
     const { role } = req.body;
 
     if (!role) {
@@ -498,7 +498,7 @@ export const getAssigneeScopes = async (
       return;
     }
 
-    const assigneeId = parseInt(req.params.assigneeId, 10);
+    const assigneeId = req.params.assigneeId;
 
     // Verify assignee exists
     const assignee = await dbService.getUserById(assigneeId);
@@ -532,7 +532,7 @@ export const addAssigneeScope = async (
       return;
     }
 
-    const assigneeId = parseInt(req.params.assigneeId, 10);
+    const assigneeId = req.params.assigneeId;
     const { scope_name } = req.body;
 
     if (!scope_name) {
@@ -589,7 +589,7 @@ export const removeAssigneeScope = async (
   } catch (err) {
     const error = err as Error;
     console.error(err);
-    
+
     // Handle "not found" error
     if (error.message && error.message.includes("not found")) {
       res.status(404).json({ error: "Scope not found" });
