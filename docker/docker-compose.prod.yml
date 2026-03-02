@@ -1,7 +1,8 @@
-version: '3.8'
+# Ollama runs on its own separate LXC — set OLLAMA_HOST in .env.production
+# to that LXC's IP, e.g.: OLLAMA_HOST=http://192.168.1.x:11434
 
 services:
-  # CeiVoice API Backend
+  # ─── CeiVoice API Backend ────────────────────────────────────────────────────
   api:
     build:
       context: ..
@@ -10,24 +11,12 @@ services:
     restart: unless-stopped
     ports:
       - "5000:5000"
+    env_file:
+      - ../.env.production
     environment:
-      NODE_ENV: ${NODE_ENV:-production}
-      DATABASE_URL: ${DATABASE_URL}
-      JWT_SECRET: ${JWT_SECRET}
-      PASSPORT_SECRET: ${PASSPORT_SECRET}
-      RESEND_API_KEY: ${RESEND_API_KEY}
-      FROM_EMAIL: ${FROM_EMAIL}
-      FRONTEND_URL: ${FRONTEND_URL}
-      RABBITMQ_ENABLED: ${RABBITMQ_ENABLED:-true}
-      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
-      GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL:-}
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
+      NODE_ENV: production
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:5000/api/auth/me"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:5000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -40,35 +29,25 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # RabbitMQ Message Queue
-  rabbitmq:
-    image: rabbitmq:4-management-alpine
-    container_name: ceivoice-rabbitmq
+  # ─── Cloudflare Tunnel (exposes api.ceivoice.app → api:5000) ─────────────────
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: ceivoice-cloudflared
     restart: unless-stopped
+    command: tunnel --no-autoupdate run
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
-    ports:
-      - "5672:5672"    # AMQP port
-      - "15672:15672"  # Management UI
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - api
     networks:
       - ceivoice-network
     logging:
       driver: "json-file"
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: "5m"
+        max-file: "2"
 
-volumes:
-  rabbitmq_data:
-    driver: local
+volumes: {}
 
 networks:
   ceivoice-network:
