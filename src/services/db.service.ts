@@ -115,9 +115,28 @@ export const getTicketsByAssignee = async (assigneeId: string) => {
     include: {
       status: true,
       category: true,
-      assignee: true
+      assignee: true,
+      creator: true
     },
     orderBy: { deadline: "asc" }
+  });
+};
+
+export const getResolvedTicketsByAssignee = async (assigneeId: string) => {
+  return await prisma.ticket.findMany({
+    where: {
+      assignee_user_id: assigneeId,
+      status_id: {
+        in: [5, 6] // Only Solved (5) and Failed (6)
+      }
+    },
+    include: {
+      status: true,
+      category: true,
+      assignee: true,
+      creator: true
+    },
+    orderBy: { updated_at: "desc" }
   });
 };
 
@@ -153,6 +172,42 @@ export const getAllAssignees = async () => {
       }
     }
   });
+};
+
+export const getAllUsers = async () => {
+  const users = await prisma.user.findMany({
+    include: {
+      scopes: true,
+    },
+    orderBy: { created_at: "desc" }
+  });
+
+  // Enrich with ticket counts
+  return await Promise.all(users.map(async (user) => {
+    const [activeCount, resolvedCount] = await Promise.all([
+      prisma.ticket.count({
+        where: {
+          assignee_user_id: user.user_id,
+          status_id: { notIn: [5, 6] }
+        }
+      }),
+      prisma.ticket.count({
+        where: {
+          assignee_user_id: user.user_id,
+          status_id: { in: [5, 6] }
+        }
+      })
+    ]);
+    const submittedCount = await prisma.ticket.count({
+      where: { creator_user_id: user.user_id }
+    });
+    return {
+      ...user,
+      active_ticket_count: activeCount,
+      resolved_count: resolvedCount,
+      submitted_count: submittedCount
+    };
+  }));
 };
 
 // ===== ASSIGNMENT SERVICE =====

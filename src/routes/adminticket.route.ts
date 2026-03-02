@@ -39,6 +39,9 @@ router.post("/:id/unmerge", adminController.unmergeTicket);
 // Unlink request from ticket (ST005)
 router.delete("/tickets/:ticketId/requests/:requestId", adminController.unlinkRequest);
 
+// List all users (admin user management)
+router.get("/users", adminController.listUsers);
+
 // User role management (EP06-ST001)
 router.patch("/users/:userId/role", adminController.updateUserRole);
 

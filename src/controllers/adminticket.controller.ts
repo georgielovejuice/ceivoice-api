@@ -446,6 +446,26 @@ export const unmergeTicket = async (
   }
 };
 
+// ===== USER MANAGEMENT =====
+
+export const listUsers = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    if (!req.user || (req.user as UserProfile).role !== "ADMIN") {
+      res.status(403).json({ error: "Forbidden - Admin access required" });
+      return;
+    }
+
+    const users = await dbService.getAllUsers();
+    res.json(users);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch users" });
+  }
+};
+
 // ===== USER ROLE MANAGEMENT =====
 
 export const updateUserRole = async (

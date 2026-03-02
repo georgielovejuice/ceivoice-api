@@ -320,7 +320,10 @@ export const getAssignedTickets = async (
       return;
     }
     const userId = (req.user as UserProfile).user_id;
-    const tickets = await dbService.getTicketsByAssignee(userId);
+    const resolved = req.query.resolved === 'true';
+    const tickets = resolved
+      ? await dbService.getResolvedTicketsByAssignee(userId)
+      : await dbService.getTicketsByAssignee(userId);
     res.json(tickets);
   } catch (err) {
     console.error(err);
