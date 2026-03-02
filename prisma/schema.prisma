@@ -248,13 +248,3 @@ model Notification {
   @@schema("public")
 }
 
-model OauthToken {
-  token_id      Int       @id @default(autoincrement())
-  user_id       String    @unique @db.Uuid
-  google_token  String
-  refresh_token String?
-  expires_at    DateTime?
-
-  @@map("oauth_tokens")
-  @@schema("public")
-}

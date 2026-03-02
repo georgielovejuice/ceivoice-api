@@ -52,7 +52,7 @@ export class AiService {
           "assignee_id": "Look at your chosen 'category'. Find an agent whose 'skills' explicitly cover this category. If there is no explicit match, you MUST output -1. Do not guess.",
           "priority": "Low", "Medium", "High", or "Critical",
           "summary": "Write a formal 2-sentence dispatcher summary. Sentence 1: State the core problem. Sentence 2: State the business impact. Do NOT use first-person pronouns.",
-          "suggested_solution": "A step-by-step guide to fix it. Return a single string, NOT an array."
+          "suggested_solution": "A step-by-step guide to fix it. Return a single string, NOT an array. Format as a numbered list: 1. Step one. 2. Step two."
         }
       `;
 
@@ -98,6 +98,9 @@ export class AiService {
           priority: data.priority || "Medium",
           assignee_user_id: finalAssigneeId,
           category_id: categoryRecord?.category_id,
+          status: {
+            connect: { name: "Draft" }
+          }
         },
       });
 
