@@ -1,7 +1,6 @@
 # Dependencies
 node_modules
 backend/node_modules
-pnpm-lock.yaml
 
 # Development
 npm-debug.log
@@ -36,5 +35,3 @@ README.md
 # Other
 .cache
 tmp
-
-
