@@ -34,7 +34,7 @@ export const editDraftTicket = async (
       return;
     }
 
-    if (ticket.status_id !== 1) { // 1 = Draft
+    if (ticket.status?.name !== "Draft") {
       res.status(400).json({ error: "Only draft tickets can be edited" });
       return;
     }
@@ -138,10 +138,10 @@ export const activateDraftTicket = async (
       return;
     }
 
-    if (ticket.status_id !== 1) { // 1 = Draft
+    if (ticket.status?.name !== "Draft") {
       res.status(400).json({
         error: "Only Draft tickets can be activated",
-        current_status_id: ticket.status_id
+        current_status: ticket.status?.name
       });
       return;
     }
@@ -409,7 +409,7 @@ export const assignTicket = async (
     );
 
     // Only move to Assigned (3) if ticket is currently New (2)
-    if (ticket.status_id === 2) {
+    if (ticket.status?.name === "New") {
       await dbService.updateTicket(ticketId, { status_id: 3 });
     }
 
@@ -483,7 +483,7 @@ export const addComment = async (
       try {
         const ticket = await dbService.getTicketById(ticketId);
         const commenterEmail = (req.user as UserProfile).email || "Support Team";
-        
+
         if (ticket && ticket.ticket_requests && ticket.ticket_requests.length > 0) {
           const request = ticket.ticket_requests[0]?.request;
           if (request) {

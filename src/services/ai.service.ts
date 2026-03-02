@@ -1,10 +1,12 @@
-import ollama from "ollama";
+import { Ollama } from "ollama";
 import { PrismaClient } from "@prisma/client";
+import config from "../config/environment";
 
 const prisma = new PrismaClient();
+const ollama = new Ollama({ host: config.ai.ollamaHost });
 
 export class AiService {
-  private modelName = "ceivoice-ai";
+  private readonly modelName = config.ai.modelName;
 
   /**
    * ALL-IN-ONE BACKGROUND WORKER

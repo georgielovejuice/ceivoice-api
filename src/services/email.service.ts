@@ -11,6 +11,9 @@ const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null;
 
+// Set DISABLE_EMAIL=true in .env to suppress all outbound emails (dev/testing)
+const EMAIL_DISABLED = process.env.DISABLE_EMAIL === "true";
+
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 const FROM_EMAIL = process.env.FROM_EMAIL || "noreply@mail.ceivoice.app";
 
@@ -22,6 +25,10 @@ export const sendConfirmationEmail = async (
   trackingId: string,
   ticketId: number
 ): Promise<boolean> => {
+  if (EMAIL_DISABLED) {
+    console.log(`[Email disabled] Skipping confirmation email to ${email}`);
+    return true;
+  }
   try {
     const htmlContent = await render(
       React.createElement(ConfirmationEmail, {
@@ -66,6 +73,10 @@ export const sendStatusChangeEmail = async (
   newStatus: string,
   trackingId: string
 ): Promise<boolean> => {
+  if (EMAIL_DISABLED) {
+    console.log(`[Email disabled] Skipping status change email to ${email}`);
+    return true;
+  }
   try {
     const htmlContent = await render(
       React.createElement(StatusChangeEmail, {
@@ -110,6 +121,10 @@ export const sendCommentNotificationEmail = async (
   commenterName: string,
   trackingId: string
 ): Promise<boolean> => {
+  if (EMAIL_DISABLED) {
+    console.log(`[Email disabled] Skipping comment notification email to ${email}`);
+    return true;
+  }
   try {
     const htmlContent = await render(
       React.createElement(CommentNotificationEmail, {
@@ -154,6 +169,10 @@ export const sendAssignmentNotificationEmail = async (
   ticketTitle: string,
   assigneeName: string
 ): Promise<boolean> => {
+  if (EMAIL_DISABLED) {
+    console.log(`[Email disabled] Skipping assignment notification email to ${email}`);
+    return true;
+  }
   try {
     const htmlContent = await render(
       React.createElement(AssignmentNotificationEmail, {

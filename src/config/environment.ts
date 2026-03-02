@@ -40,6 +40,12 @@ supabase: {
   rabbitmq: {
     url: process.env.RABBITMQ_URL || "amqp://localhost:5672",
     enabled: process.env.RABBITMQ_ENABLED === "true" || process.env.NODE_ENV === "production"
+  },
+
+  // AI / Ollama Configuration
+  ai: {
+    ollamaHost: process.env.OLLAMA_HOST || "http://localhost:11434",
+    modelName: process.env.OLLAMA_MODEL || "ceivoice-ai"
   }
 };
 

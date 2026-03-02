@@ -44,7 +44,7 @@ export const updateDraft = async (
       return;
     }
 
-    if (ticket.status_id !== 1) { // 1 = Draft
+    if (ticket.status?.name !== "Draft") {
       res.status(400).json({ error: "Only draft tickets can be updated" });
       return;
     }
@@ -102,29 +102,39 @@ export const approveDraft = async (
       return;
     }
 
-    if (ticket.status_id !== 1) { // 1 = Draft
+    if (ticket.status?.name !== "Draft") {
       res.status(400).json({ error: "Only draft tickets can be approved" });
       return;
     }
 
-    // Get the status IDs for Draft (1) and New (2)
-    const draftStatusId = 1;
-    const newStatusId = 2;
+    const draftStatusId = 1; // Draft
+    const newStatusId   = 2; // New
+    const now = new Date();
+    const adminId = (req.user as UserProfile).user_id;
 
-    // Update status to New (2) with activation metadata
+    // Update parent ticket status to New with activation metadata
     await dbService.updateTicket(ticketId, {
       status_id: newStatusId,
-      activated_at: new Date(),
-      activated_by_id: (req.user as UserProfile).user_id
+      activated_at: now,
+      activated_by_id: adminId
     });
 
-    // Record status history
-    await dbService.createStatusHistory(
-      ticketId,
-      draftStatusId,
-      newStatusId,
-      (req.user as UserProfile).user_id
-    );
+    // Record status history for parent
+    await dbService.createStatusHistory(ticketId, draftStatusId, newStatusId, adminId);
+
+    // Also update all merged child tickets (parent_ticket_id = ticketId) to New
+    const childTickets = await dbService.db.ticket.findMany({
+      where: { parent_ticket_id: ticketId, status_id: draftStatusId }
+    });
+
+    for (const child of childTickets) {
+      await dbService.updateTicket(child.ticket_id, {
+        status_id: newStatusId,
+        activated_at: now,
+        activated_by_id: adminId
+      });
+      await dbService.createStatusHistory(child.ticket_id, draftStatusId, newStatusId, adminId);
+    }
 
     // Auto-add request creators as followers (EP03-ST006)
     if (ticket.ticket_requests && ticket.ticket_requests.length > 0) {
@@ -260,10 +270,9 @@ export const assignTicketToUser = async (
       (req.user as UserProfile).user_id
     );
 
-    // Update status if not already assigned
-    const assignedStatusId = 3; // 3 = Assigned
-    if (ticket.status_id === 2) { // If status is New (2)
-      await dbService.updateTicket(ticketId, { status_id: assignedStatusId });
+    // Update status to Assigned (3) if currently New (2)
+    if (ticket.status?.name === "New") {
+      await dbService.updateTicket(ticketId, { status_id: 3 });
     }
 
     res.json({ message: "Ticket assigned successfully" });
@@ -625,7 +634,7 @@ export const unlinkRequest = async (
       res.status(404).json({ error: "Ticket not found" });
       return;
     }
-    if (ticket.status_id !== 1) {
+    if (ticket.status?.name !== "Draft") {
       res.status(400).json({ error: "Can only unlink requests from Draft tickets" });
       return;
     }

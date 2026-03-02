@@ -145,7 +145,7 @@ export const getAllCategories = async () => {
 
 export const getAllAssignees = async () => {
   return await prisma.user.findMany({
-    where: { role: { in: ["ASSIGNEE", "ADMIN"] } },
+    where: { role: { in: ["assignee", "admin"] } },
     include: {
       scopes: true,
       assigned_tickets: {
@@ -589,7 +589,7 @@ export const getTopCategories = async (dateFilter: Date | null, limit: number = 
 
 export const getAssigneeWorkloadDistribution = async () => {
   const assignees = await prisma.user.findMany({
-    where: { role: { in: ["ASSIGNEE", "ADMIN"] } },
+    where: { role: { in: ["assignee", "admin"] } },
     select: {
       user_id: true,
       user_name: true,
