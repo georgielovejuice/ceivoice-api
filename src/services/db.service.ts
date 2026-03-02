@@ -250,7 +250,7 @@ export const createStatusHistory = async (
 export const getStatusHistory = async (ticketId: number) => {
   return await prisma.statusHistory.findMany({
     where: { ticket_id: ticketId },
-    include: { new_status: true, changed_by: true },
+    include: { old_status: true, new_status: true, changed_by: true },
     orderBy: { changed_at: "asc" }
   });
 };
@@ -283,7 +283,7 @@ export const createAssignmentHistory = async (
 export const getAssignmentHistory = async (ticketId: number) => {
   return await prisma.assignmentHistory.findMany({
     where: { ticket_id: ticketId },
-    include: { old_assignee: true, new_assignee: true },
+    include: { old_assignee: true, new_assignee: true, changed_by: true },
     orderBy: { changed_at: "asc" }
   });
 };

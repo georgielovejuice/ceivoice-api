@@ -40,6 +40,9 @@ router.post("/id/:id/unassign", authorize(["ASSIGNEE", "ADMIN"]), ticketControll
 router.post("/id/:id/comments", ticketController.addComment);
 router.get("/id/:id/comments", ticketController.getComments);
 
+// Ticket history / audit logs (§2.3 - read-only timeline)
+router.get("/id/:id/history", ticketController.getTicketHistory);
+
 // Followers
 router.post("/id/:id/followers", ticketController.addFollower);
 router.get("/id/:id/followers", ticketController.getFollowers);

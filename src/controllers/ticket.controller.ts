@@ -535,6 +535,87 @@ export const getComments = async (
   }
 };
 
+// ===== TICKET HISTORY (Audit Log) =====
+
+export const getTicketHistory = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const ticketId = Number.parseInt(req.params.id, 10);
+
+    const ticket = await dbService.getTicketById(ticketId);
+    if (!ticket) {
+      res.status(404).json({ error: "Ticket not found" });
+      return;
+    }
+
+    // Combine status history and assignment history into a single timeline
+    const [statusHistory, assignmentHistory] = await Promise.all([
+      dbService.getStatusHistory(ticketId),
+      dbService.getAssignmentHistory(ticketId),
+    ]);
+
+    // Build unified timeline
+    const timeline: any[] = [];
+
+    for (const sh of statusHistory) {
+      timeline.push({
+        type: "status_change",
+        timestamp: sh.changed_at,
+        old_status: sh.old_status?.name ?? null,
+        new_status: sh.new_status?.name ?? null,
+        changed_by: sh.changed_by
+          ? {
+              user_id: sh.changed_by.user_id,
+              name: sh.changed_by.full_name ?? sh.changed_by.user_name ?? sh.changed_by.email,
+            }
+          : null,
+        change_reason: (sh as any).change_reason ?? null,
+      });
+    }
+
+    for (const ah of assignmentHistory) {
+      timeline.push({
+        type: "assignment_change",
+        timestamp: ah.changed_at,
+        old_assignee: ah.old_assignee
+          ? {
+              user_id: ah.old_assignee.user_id,
+              name: ah.old_assignee.full_name ?? ah.old_assignee.user_name ?? ah.old_assignee.email,
+            }
+          : null,
+        new_assignee: ah.new_assignee
+          ? {
+              user_id: ah.new_assignee.user_id,
+              name: ah.new_assignee.full_name ?? ah.new_assignee.user_name ?? ah.new_assignee.email,
+            }
+          : null,
+        changed_by: ah.changed_by
+          ? {
+              user_id: ah.changed_by.user_id,
+              name: ah.changed_by.full_name ?? ah.changed_by.user_name ?? ah.changed_by.email,
+            }
+          : null,
+        change_reason: (ah as any).change_reason ?? null,
+      });
+    }
+
+    // Sort by timestamp ascending (read-only audit trail)
+    timeline.sort(
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+
+    res.json({
+      ticket_id: ticketId,
+      history: timeline,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch ticket history" });
+  }
+};
+
 // ===== FOLLOWERS =====
 
 export const addFollower = async (
