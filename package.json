@@ -18,6 +18,9 @@
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": ["@prisma/client", "@prisma/engines", "prisma"]
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/georgielovejuice/test-ceivoice-backend-database.git"
