@@ -1,5 +1,4 @@
 import { Request, Response } from "express";
-import type { UserProfile } from "../types";
 import * as dbService from "../services/db.service";
 
 // ===== ADMIN REPORTING =====
@@ -66,7 +65,7 @@ export const getCategoryTrends = async (
 ): Promise<void> => {
   try {
     const { days } = req.query;
-    const daysNum = parseInt(days as string) || 30;
+    const daysNum = Number.parseInt(days as string) || 30;
 
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - daysNum);
@@ -98,7 +97,7 @@ export const getAssigneeWorkload = async (
       return;
     }
 
-    const userId = (req.user as UserProfile).user_id;
+    const userId = req.user.user_id;
     const { sort_by } = req.query; // 'deadline', 'priority', 'created_at'
 
     // Get active tickets assigned to this user (excluding Solved/Failed)
@@ -159,7 +158,7 @@ export const getAssigneePerformance = async (
       return;
     }
 
-    const userId = (req.user as UserProfile).user_id;
+    const userId = req.user.user_id;
     const { period } = req.query; // 'last_7_days', 'last_30_days', 'all_time'
 
     let dateFilter: Date | null = null;

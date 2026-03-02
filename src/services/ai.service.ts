@@ -98,9 +98,6 @@ export class AiService {
           priority: data.priority || "Medium",
           assignee_user_id: finalAssigneeId,
           category_id: categoryRecord?.category_id,
-          status: {
-            connect: { name: "Draft" }
-          }
         },
       });
 
