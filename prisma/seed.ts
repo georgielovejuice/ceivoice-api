@@ -67,32 +67,32 @@ async function main() {
   console.log('👥 Seeding Users...')
   const admin = await prisma.user.upsert({
     where: { email: 'admin@ceivoice.com' }, update: {},
-    create: { email: 'admin@ceivoice.com', full_name: 'Sarah Connor', role: 'admin' },
+    create: { email: 'admin@ceivoice.com', full_name: 'Sarah Connor', role: 'ADMIN' },
   })
 
   const assigneeIT = await prisma.user.upsert({
     where: { email: 'tech_lead@ceivoice.com' }, update: {},
-    create: { email: 'tech_lead@ceivoice.com', full_name: 'Elliot Alderson', role: 'assignee', scopes: { create: { scope_name: 'IT' } } },
+    create: { email: 'tech_lead@ceivoice.com', full_name: 'Elliot Alderson', role: 'ASSIGNEE', scopes: { create: { scope_name: 'IT' } } },
   })
 
   const assigneeHR = await prisma.user.upsert({
     where: { email: 'hr_lead@ceivoice.com' }, update: {},
-    create: { email: 'hr_lead@ceivoice.com', full_name: 'Toby Flenderson', role: 'assignee', scopes: { create: { scope_name: 'HR' } } },
+    create: { email: 'hr_lead@ceivoice.com', full_name: 'Toby Flenderson', role: 'ASSIGNEE', scopes: { create: { scope_name: 'HR' } } },
   })
 
   const user1 = await prisma.user.upsert({
     where: { email: 'john.doe@example.com' }, update: {},
-    create: { email: 'john.doe@example.com', full_name: 'John Doe', role: 'user' },
+    create: { email: 'john.doe@example.com', full_name: 'John Doe', role: 'USER' },
   })
 
   const user2 = await prisma.user.upsert({
     where: { email: 'jane.smith@example.com' }, update: {},
-    create: { email: 'jane.smith@example.com', full_name: 'Jane Smith', role: 'user' },
+    create: { email: 'jane.smith@example.com', full_name: 'Jane Smith', role: 'USER' },
   })
 
   const user3 = await prisma.user.upsert({
     where: { email: 'mike.ross@example.com' }, update: {},
-    create: { email: 'mike.ross@example.com', full_name: 'Mike Ross', role: 'user' },
+    create: { email: 'mike.ross@example.com', full_name: 'Mike Ross', role: 'USER' },
   })
 
   // ==============================================
