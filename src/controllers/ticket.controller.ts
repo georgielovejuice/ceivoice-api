@@ -1,4 +1,4 @@
- import { Request, Response } from "express";
+import { Request, Response } from "express";
 import type { UserProfile } from "../types";
 import * as dbService from "../services/db.service";
 import * as emailService from "../services/email.service";
@@ -138,6 +138,8 @@ export const activateDraftTicket = async (
       return;
     }
 
+    console.log(`🚀 Activating draft ticket #${ticket}`);
+
     if (ticket.status?.name !== "Draft") {
       res.status(400).json({
         error: "Only Draft tickets can be activated",
@@ -166,6 +168,13 @@ export const activateDraftTicket = async (
       activated_at: new Date(),
       activated_by_id: adminUserId
     });
+
+    // Finalise AI metric
+    await dbService.finaliseAiMetric(
+      ticketId,
+      ticket.category_id,
+      ticket.assignee_user_id ?? null
+    );
 
     // Record status history
     await dbService.createStatusHistory(

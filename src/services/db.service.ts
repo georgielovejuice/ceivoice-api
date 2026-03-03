@@ -877,20 +877,17 @@ export const finaliseAiMetric = async (
   finalAssigneeId: string | null,
 ) => {
   const existing = await prisma.aiTicketMetric.findUnique({ where: { ticket_id: ticketId } });
-  if (!existing) return; // ticket was not AI-processed — nothing to do
 
-  const categoryMatch       = existing.suggested_category_id !== null
-    && existing.suggested_category_id === finalCategoryId;
-  const suggestionAccepted  = categoryMatch
-    && (existing.suggested_assignee_id ?? null) === finalAssigneeId;
+  if (!existing) {
+    console.warn(`⚠️ No aiTicketMetric found for ticket #${ticketId} — skipping`);
+    return;
+  }
 
   return await prisma.aiTicketMetric.update({
     where: { ticket_id: ticketId },
     data: {
-      final_category_id:   finalCategoryId,
-      final_assignee_id:   finalAssigneeId,
-      category_match:      categoryMatch,
-      suggestion_accepted: suggestionAccepted,
+      final_category_id: finalCategoryId,
+      final_assignee_id: finalAssigneeId,
     },
   });
 };
