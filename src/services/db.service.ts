@@ -870,13 +870,7 @@ export const unmergeTicket = async (childTicketId: number) => {
   });
 };
 
-// ===== AI METRICS SERVICE =====
 
-/**
- * Called by approveDraft: records what the admin actually kept (final values).
- * Computes category_match and suggestion_accepted in JS since we didn't use
- * Postgres generated columns (to stay compatible with Prisma).
- */
 export const finaliseAiMetric = async (
   ticketId: number,
   finalCategoryId: number | null,

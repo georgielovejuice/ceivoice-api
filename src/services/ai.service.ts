@@ -8,10 +8,6 @@ const ollama = new Ollama({ host: config.ai.ollamaHost });
 export class AiService {
   private readonly modelName = config.ai.modelName;
 
-  /**
-   * ALL-IN-ONE BACKGROUND WORKER
-   * Processes Category, Priority, Assignee, Summary, and Solution in one pass.
-   */
   async processTicketFull(
     ticketId: number,
     userMessage: string,
@@ -19,19 +15,17 @@ export class AiService {
     availableAgents: any[],
   ) {
     try {
-      // 1. The Index Trick: Map simple numbers to complicated UUIDs
       const agentMap: Record<number, string> = {};
 
       const agentList = availableAgents.map((a, index) => {
         agentMap[index] = a.user_id;
         return {
-          id: index, // Give the AI a simple number
+          id: index,
           name: a.full_name || 'Agent',
           skills: a.scopes ? a.scopes.map((s: any) => s.scope_name).join(", ") : "General"
         };
       });
 
-      // 👇 THE HACK: Add a fake agent to the end of the list for the AI to pick
       const UNASSIGNED_ID = -1;
       agentList.push({
         id: UNASSIGNED_ID,
@@ -39,7 +33,6 @@ export class AiService {
         skills: "Use this agent if the request does not perfectly match the skills of the other agents. Do not guess."
       });
 
-      // 2. The Master Prompt
       const prompt = `
         You are an expert Corporate Helpdesk Dispatcher. Analyze the user's request: "${userMessage}"
         Valid Categories: ${JSON.stringify(availableCategoryNames)}
@@ -56,8 +49,6 @@ export class AiService {
         }
       `;
 
-
-      // 3. Call the local AI Model (timed for metrics)
       const t0 = Date.now();
       const response = await ollama.chat({
         model: this.modelName,
@@ -69,9 +60,6 @@ export class AiService {
 
       const data = JSON.parse(response.message.content);
 
-
-      // 4. Data Formatting & Fallbacks
-      // 👇 Update this logic so if the AI picks -1, it translates to a real database 'null'
       let finalAssigneeId = null;
       if (data.assignee_id !== null && data.assignee_id !== UNASSIGNED_ID && agentMap[data.assignee_id]) {
         finalAssigneeId = agentMap[data.assignee_id];
@@ -85,12 +73,10 @@ export class AiService {
         ? "- " + data.suggested_solution.join("\n- ")
         : data.suggested_solution;
 
-      // Lookup the actual category ID from the database based on the AI's string choice
       const categoryRecord = await prisma.category.findUnique({
         where: { name: finalCategoryName },
       });
 
-      // 5. Update the placeholder ticket in the database with the real data!
       await prisma.ticket.update({
         where: { ticket_id: ticketId },
         data: {
@@ -103,7 +89,6 @@ export class AiService {
         },
       });
 
-      // 6. Record AI metrics for reporting (ai_ticket_metrics table)
       await prisma.aiTicketMetric.upsert({
         where: { ticket_id: ticketId },
         update: {
