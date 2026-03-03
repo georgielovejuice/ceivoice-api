@@ -28,10 +28,12 @@ model TicketStatus {
 model Category {
   category_id Int      @id @default(autoincrement())
   name        String   @unique @db.VarChar(50)
-  sla_hours   Int      @default(24)
-  description String?
-  is_active   Boolean  @default(true)
-  tickets     Ticket[]
+  sla_hours              Int              @default(24)
+  description            String?
+  is_active              Boolean          @default(true)
+  tickets                Ticket[]
+  ai_suggested_tickets   AiTicketMetric[] @relation("AiSuggestedCategory")
+  ai_final_tickets       AiTicketMetric[] @relation("AiFinalCategory")
 
   @@index([name])
   @@map("categories")
@@ -55,10 +57,12 @@ model User {
   comments             Comment[]
   followers            Follower[]
   notifications        Notification[]
-  status_changes       StatusHistory[]     @relation("StatusChangedBy")
-  ticket_activations   Ticket[]            @relation("TicketActivatedBy")
-  assigned_tickets     Ticket[]            @relation("CurrentAssignee")
-  created_tickets      Ticket[]            @relation("TicketCreator")
+  status_changes            StatusHistory[]     @relation("StatusChangedBy")
+  ticket_activations        Ticket[]            @relation("TicketActivatedBy")
+  assigned_tickets          Ticket[]            @relation("CurrentAssignee")
+  created_tickets           Ticket[]            @relation("TicketCreator")
+  ai_suggested_for          AiTicketMetric[]    @relation("AiSuggestedAssignee")
+  ai_final_for              AiTicketMetric[]    @relation("AiFinalAssignee")
 
   @@index([email])
   @@index([role])
@@ -114,6 +118,7 @@ model Ticket {
   status                TicketStatus?       @relation(fields: [status_id], references: [status_id])
   parent_ticket         Ticket?             @relation("MergedTickets", fields: [parent_ticket_id], references: [ticket_id], onDelete: SetNull)
   child_tickets         Ticket[]            @relation("MergedTickets")
+  ai_metric             AiTicketMetric?
 
   @@index([status_id])
   @@index([category_id])
@@ -248,3 +253,27 @@ model Notification {
   @@schema("public")
 }
 
+model AiTicketMetric {
+  id                       Int       @id @default(autoincrement())
+  ticket_id                Int       @unique
+  processing_ms            Int
+  suggested_category_id    Int?
+  suggested_assignee_id    String?   @db.Uuid
+  final_category_id        Int?
+  final_assignee_id        String?   @db.Uuid
+  category_match           Boolean?
+  suggestion_accepted      Boolean?
+  processed_at             DateTime  @default(now())
+
+  ticket                   Ticket    @relation(fields: [ticket_id], references: [ticket_id], onDelete: Cascade)
+  suggested_category       Category? @relation("AiSuggestedCategory", fields: [suggested_category_id], references: [category_id], onDelete: SetNull)
+  suggested_assignee       User?     @relation("AiSuggestedAssignee", fields: [suggested_assignee_id], references: [user_id], onDelete: SetNull)
+  final_category           Category? @relation("AiFinalCategory", fields: [final_category_id], references: [category_id], onDelete: SetNull)
+  final_assignee           User?     @relation("AiFinalAssignee", fields: [final_assignee_id], references: [user_id], onDelete: SetNull)
+
+  @@index([processed_at])
+  @@index([category_match])
+  @@index([suggestion_accepted])
+  @@map("ai_ticket_metrics")
+  @@schema("public")
+}

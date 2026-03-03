@@ -148,8 +148,7 @@ export const getAssigneeWorkload = async (
   }
 };
 
-export const getAssigneePerformance = async (
-  req: Request,
+export const getAssigneePerformance = async (  req: Request,
   res: Response
 ): Promise<void> => {
   try {
@@ -213,5 +212,40 @@ export const getAssigneePerformance = async (
   } catch (err) {
     console.error("Error fetching assignee performance:", err);
     res.status(500).json({ error: "Failed to fetch performance metrics" });
+  }
+};
+
+// ===== AI ACCURACY REPORTING =====
+// REP-AI-001: AI Processing Accuracy
+
+export const getAiAccuracyMetrics = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { period } = req.query;
+
+    let dateFilter: Date | null = null;
+    if (period === "last_7_days") {
+      dateFilter = new Date();
+      dateFilter.setDate(dateFilter.getDate() - 7);
+    } else if (period === "last_30_days") {
+      dateFilter = new Date();
+      dateFilter.setDate(dateFilter.getDate() - 30);
+    } else if (period === "last_90_days") {
+      dateFilter = new Date();
+      dateFilter.setDate(dateFilter.getDate() - 90);
+    }
+
+    const metrics = await dbService.getAiAccuracyMetrics(dateFilter);
+
+    res.json({
+      period: period || "all_time",
+      metrics,
+      generated_at: new Date(),
+    });
+  } catch (err) {
+    console.error("Error fetching AI accuracy metrics:", err);
+    res.status(500).json({ error: "Failed to fetch AI accuracy metrics" });
   }
 };

@@ -57,13 +57,15 @@ export class AiService {
       `;
 
 
-      // 3. Call the local AI Model
+      // 3. Call the local AI Model (timed for metrics)
+      const t0 = Date.now();
       const response = await ollama.chat({
         model: this.modelName,
         format: "json",
         messages: [{ role: "user", content: prompt }],
         options: { temperature: 0.2 },
       });
+      const processingMs = Date.now() - t0;
 
       const data = JSON.parse(response.message.content);
 
@@ -98,6 +100,22 @@ export class AiService {
           priority: data.priority || "Medium",
           assignee_user_id: finalAssigneeId,
           category_id: categoryRecord?.category_id,
+        },
+      });
+
+      // 6. Record AI metrics for reporting (ai_ticket_metrics table)
+      await prisma.aiTicketMetric.upsert({
+        where: { ticket_id: ticketId },
+        update: {
+          processing_ms:         processingMs,
+          suggested_category_id: categoryRecord?.category_id ?? null,
+          suggested_assignee_id: finalAssigneeId,
+        },
+        create: {
+          ticket_id:             ticketId,
+          processing_ms:         processingMs,
+          suggested_category_id: categoryRecord?.category_id ?? null,
+          suggested_assignee_id: finalAssigneeId,
         },
       });
 

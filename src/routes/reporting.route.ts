@@ -24,6 +24,14 @@ router.get(
   reportingController.getCategoryTrends
 );
 
+// GET /api/reporting/admin/ai-accuracy?period=last_30_days
+// AI Accuracy: Processing time, category match rate, suggestion acceptance (REP-AI-001)
+router.get(
+  "/admin/ai-accuracy",
+  authorize(["ADMIN"]),
+  reportingController.getAiAccuracyMetrics
+);
+
 // ===== ASSIGNEE REPORTING =====
 // GET /api/reporting/assignee/workload?sort_by=deadline
 // Workload Dashboard: Active tickets sorted by urgency/deadline (REP-ASG-001)
