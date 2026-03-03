@@ -17,48 +17,99 @@ export class AiService {
     try {
       const agentMap: Record<number, string> = {};
 
-      const agentList = availableAgents.map((a, index) => {
+      const agentList = availableAgents
+      .filter(a => a.scopes && a.scopes.length > 0)  // only agents with skills
+      .map((a, index) => {
         agentMap[index] = a.user_id;
         return {
           id: index,
           name: a.full_name || 'Agent',
-          skills: a.scopes ? a.scopes.map((s: any) => s.scope_name).join(", ") : "General"
+          skills: a.scopes.map((s: any) => s.scope_name).join(", ")
         };
       });
 
       const UNASSIGNED_ID = -1;
-      agentList.push({
-        id: UNASSIGNED_ID,
-        name: "Unassigned Queue",
-        skills: "Use this agent if the request does not perfectly match the skills of the other agents. Do not guess."
-      });
+      const CONFIDENCE_THRESHOLD = 75;
 
-      const prompt = `
-        You are an expert Corporate Helpdesk Dispatcher. Analyze the user's request: "${userMessage}"
-        Valid Categories: ${JSON.stringify(availableCategoryNames)}
-        Available Agents: ${JSON.stringify(agentList)}
-
-        Output strictly JSON with these exact keys:
+      // Build agent list for call 2 WITH unassigned option as escape hatch
+      const agentListWithUnassigned = [
+        ...agentList,
         {
-          "title": "Short, concise title",
-          "category": "Must match one of the Valid Categories exactly",
-          "assignee_id": "Look at your chosen 'category'. Find an agent whose 'skills' explicitly cover this category. If there is no explicit match, you MUST output -1. Do not guess.",
-          "priority": "Low", "Medium", "High", or "Critical",
-          "summary": "Write a formal 2-sentence dispatcher summary. Sentence 1: State the core problem. Sentence 2: State the business impact. Do NOT use first-person pronouns.",
-          "suggested_solution": "A step-by-step guide to fix it. Return a single string, NOT an array. Format as a numbered list: 1. Step one. 2. Step two."
+          id: UNASSIGNED_ID,
+          name: "Unassigned Queue",
+          skills: "Use this if the request topic does not clearly match any other agent's skills."
+        }
+      ];
+
+      // 👇 1. LOG WHAT WE ARE SENDING TO THE AI (Put this right before the prompt)
+      console.log("🕵️‍♂️ Agents seen by AI:", JSON.stringify(agentList, null, 2));
+      console.log("📂 Categories seen by AI:", availableCategoryNames);
+
+      // === CALL 1: Understand the ticket ===
+      const call1Prompt = `
+        You are a helpdesk ticket classifier. Analyze this support request: "${userMessage}"
+        Valid Categories: ${JSON.stringify(availableCategoryNames)}
+
+        Output strict JSON:
+        {
+          "title": "Short concise title under 100 characters",
+          "category": "Exact match from Categories list",
+          "priority": "Low" or "Medium" or "High" or "Critical",
+          "summary": "2 sentences. First: core problem. Second: business impact. No first-person.",
+          "suggested_solution": "1. Step one. 2. Step two. (single string)",
+          "topic_keywords": "2-3 words describing the technical domain e.g. network connectivity, payroll salary, software access"
         }
       `;
 
       const t0 = Date.now();
-      const response = await ollama.chat({
+      const response1 = await ollama.chat({
         model: this.modelName,
         format: "json",
-        messages: [{ role: "user", content: prompt }],
+        messages: [{ role: "user", content: call1Prompt }],
         options: { temperature: 0.2 },
       });
-      const processingMs = Date.now() - t0;
+      const data1 = JSON.parse(response1.message.content);
+      console.log("🤖 Call 1 - Ticket Classification:", data1);
 
-      const data = JSON.parse(response.message.content);
+      // === CALL 2: Match to agent based on topic only ===
+      const call2Prompt = `
+        You are a helpdesk dispatcher. Your job is to find the best agent for this support request.
+
+        Support topic: "${data1.topic_keywords}"
+        Original message: "${userMessage}"
+
+        Agents:
+        ${JSON.stringify(agentListWithUnassigned)}
+
+        Rules:
+        - Think about what broad technical domain the message belongs to (e.g. "wifi and ethernet" belongs to "Network")
+        - Match that domain to the closest agent skill, even if the wording is not identical
+        - Only pick Unassigned Queue if there is truly no related domain among the agents
+        - confidence is how sure you are about your pick (0-100)
+
+        Output strict JSON:
+        {
+          "assignee_id": <number from Agents list>,
+          "confidence": <0-100>,
+          "reason": "one sentence why"
+        }
+      `;
+
+      const response2 = await ollama.chat({
+        model: this.modelName,
+        format: "json",
+        messages: [{ role: "user", content: call2Prompt }],
+        options: { temperature: 0.1 },
+      });
+      const processingMs = Date.now() - t0;
+      const data2 = JSON.parse(response2.message.content);
+      console.log("🤖 Call 2 - Assignment Decision:", data2);
+
+      const assigneeId = (data2.confidence >= CONFIDENCE_THRESHOLD) ? data2.assignee_id : UNASSIGNED_ID;
+      const data = { ...data1, assignee_id: assigneeId };
+
+      // 👇 2. LOG WHAT THE AI DECIDED (Put this right after parsing)
+      console.log("🤖 Raw AI Decision:", data);
 
       let finalAssigneeId = null;
       if (data.assignee_id !== null && data.assignee_id !== UNASSIGNED_ID && agentMap[data.assignee_id]) {
