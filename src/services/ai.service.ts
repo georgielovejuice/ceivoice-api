@@ -41,9 +41,6 @@ export class AiService {
         }
       ];
 
-      // 👇 1. LOG WHAT WE ARE SENDING TO THE AI (Put this right before the prompt)
-      console.log("🕵️‍♂️ Agents seen by AI:", JSON.stringify(agentList, null, 2));
-      console.log("📂 Categories seen by AI:", availableCategoryNames);
 
       // === CALL 1: Understand the ticket ===
       const call1Prompt = `
@@ -71,7 +68,6 @@ export class AiService {
         options: { temperature: 0.2 },
       });
       const data1 = JSON.parse(response1.message.content);
-      console.log("🤖 Call 1 - Ticket Classification:", data1);
 
       // === CALL 2: Match to agent based on topic only ===
       const call2Prompt = `
@@ -105,13 +101,10 @@ export class AiService {
       });
       const processingMs = Date.now() - t0;
       const data2 = JSON.parse(response2.message.content);
-      console.log("🤖 Call 2 - Assignment Decision:", data2);
 
       const assigneeId = (data2.confidence >= CONFIDENCE_THRESHOLD) ? data2.assignee_id : UNASSIGNED_ID;
       const data = { ...data1, assignee_id: assigneeId };
 
-      // 👇 2. LOG WHAT THE AI DECIDED (Put this right after parsing)
-      console.log("🤖 Raw AI Decision:", data);
 
       let finalAssigneeId = null;
       if (data.assignee_id !== null && data.assignee_id !== UNASSIGNED_ID && agentMap[data.assignee_id]) {
@@ -174,7 +167,6 @@ export class AiService {
           category_reason:       data1.category_reason ?? null,
         },
       });
-      console.log(`📊 Confidence scores saved for Ticket #${ticketId}`);
 
       // === CALL 3: Suggest merge with existing drafts ===
       const recentDrafts = await prisma.ticket.findMany({
@@ -216,7 +208,6 @@ export class AiService {
           options: { temperature: 0.1 },
         });
         const data3 = JSON.parse(response3.message.content);
-        console.log("🤖 Call 3 - Merge Suggestion:", data3);
 
         if (data3.should_merge && data3.parent_ticket_id) {
           await prisma.suggestedMerge.upsert({
@@ -233,11 +224,9 @@ export class AiService {
               similarity_reason:   data3.reason,
             },
           });
-          console.log(`🔀 Merge suggested: #${ticketId} → parent #${data3.parent_ticket_id}`);
         }
       }
 
-      console.log(`✅ Background AI Processing Complete for Ticket #${ticketId}`);
     } catch (error) {
       console.error(`❌ Background AI failed for Ticket #${ticketId}:`, error);
 
