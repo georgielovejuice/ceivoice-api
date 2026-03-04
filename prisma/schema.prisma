@@ -45,7 +45,7 @@ model User {
   email                String              @unique @db.VarChar(255)
   full_name            String?
   user_name            String?
-  role                 String              @db.VarChar(20)
+  role                 String              @db.Text
   is_active            Boolean             @default(true)
   onboarding_completed Boolean             @default(false)
   created_at           DateTime            @default(now()) @db.Timestamptz(6)
@@ -119,6 +119,9 @@ model Ticket {
   parent_ticket         Ticket?             @relation("MergedTickets", fields: [parent_ticket_id], references: [ticket_id], onDelete: SetNull)
   child_tickets         Ticket[]            @relation("MergedTickets")
   ai_metric             AiTicketMetric?
+  ai_confidence              AiTicketConfidence?
+  suggested_merge_as_parent  SuggestedMerge[] @relation("MergeParent")
+  suggested_merge_as_child   SuggestedMerge[] @relation("MergeChild")
 
   @@index([status_id])
   @@index([category_id])
@@ -275,5 +278,37 @@ model AiTicketMetric {
   @@index([category_match])
   @@index([suggestion_accepted])
   @@map("ai_ticket_metrics")
+  @@schema("public")
+}
+
+model AiTicketConfidence {
+  id                    Int      @id @default(autoincrement())
+  ticket_id             Int      @unique
+  assignment_confidence Int?
+  assignment_reason     String?
+  category_confidence   Int?
+  category_reason       String?
+  recorded_at           DateTime @default(now())
+
+  ticket                Ticket   @relation(fields: [ticket_id], references: [ticket_id], onDelete: Cascade)
+
+  @@index([ticket_id])
+  @@map("ai_ticket_confidences")
+  @@schema("public")
+}
+
+model SuggestedMerge {
+  id                  Int      @id @default(autoincrement())
+  suggested_parent_id Int
+  suggested_child_id  Int
+  similarity_reason   String?
+  created_at          DateTime @default(now())
+
+  suggested_parent    Ticket   @relation("MergeParent", fields: [suggested_parent_id], references: [ticket_id], onDelete: Cascade)
+  suggested_child     Ticket   @relation("MergeChild",  fields: [suggested_child_id],  references: [ticket_id], onDelete: Cascade)
+
+  @@unique([suggested_parent_id, suggested_child_id])
+  @@index([suggested_child_id])
+  @@map("suggested_merges")
   @@schema("public")
 }
