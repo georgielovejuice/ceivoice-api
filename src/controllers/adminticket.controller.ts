@@ -705,3 +705,87 @@ export const unlinkRequest = async (
     res.status(500).json({ error: error.message });
   }
 };
+
+// GET /api/admin/drafts/:id/suggested-merges
+// Returns AI-suggested merge candidates for a specific draft ticket
+export const getSuggestedMergesForTicket = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    if (!req.user || (req.user as UserProfile).role !== "ADMIN") {
+      res.status(403).json({ error: "Forbidden - Admin access required" });
+      return;
+    }
+
+    const ticketId = parseInt(req.params.id, 10);
+
+    const ticket = await dbService.getTicketById(ticketId);
+    if (!ticket) {
+      res.status(404).json({ error: "Ticket not found" });
+      return;
+    }
+
+    const suggestions = await dbService.getSuggestedMergesForTicket(ticketId);
+    res.json({ ticket_id: ticketId, suggested_merges: suggestions });
+  } catch (err) {
+    const error = err as Error;
+    console.error(err);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// GET /api/admin/suggested-merges
+// Returns all AI-suggested merge pairs across all draft tickets
+export const getAllSuggestedMerges = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    if (!req.user || (req.user as UserProfile).role !== "ADMIN") {
+      res.status(403).json({ error: "Forbidden - Admin access required" });
+      return;
+    }
+
+    const suggestions = await dbService.getAllSuggestedMerges();
+    res.json({ suggested_merges: suggestions });
+  } catch (err) {
+    const error = err as Error;
+    console.error(err);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// GET /api/admin/drafts/:id/confidence
+// Returns AI confidence scores for category and assignment decisions
+export const getTicketConfidence = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    if (!req.user || (req.user as UserProfile).role !== "ADMIN") {
+      res.status(403).json({ error: "Forbidden - Admin access required" });
+      return;
+    }
+
+    const ticketId = parseInt(req.params.id, 10);
+
+    const ticket = await dbService.getTicketById(ticketId);
+    if (!ticket) {
+      res.status(404).json({ error: "Ticket not found" });
+      return;
+    }
+
+    const confidence = await dbService.getTicketConfidence(ticketId);
+    if (!confidence) {
+      res.status(404).json({ error: "No confidence data found for this ticket" });
+      return;
+    }
+
+    res.json({ ticket_id: ticketId, confidence });
+  } catch (err) {
+    const error = err as Error;
+    console.error(err);
+    res.status(500).json({ error: error.message });
+  }
+};

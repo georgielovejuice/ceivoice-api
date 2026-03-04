@@ -50,4 +50,13 @@ router.get("/assignees/:assigneeId/scopes", adminController.getAssigneeScopes);
 router.post("/assignees/:assigneeId/scopes", adminController.addAssigneeScope);
 router.delete("/assignees/:assigneeId/scopes/:scopeId", adminController.removeAssigneeScope);
 
+// AI Confidence scores for a draft ticket
+router.get("/drafts/:id/confidence", adminController.getTicketConfidence);
+
+// AI Suggested merges for a specific draft ticket
+router.get("/drafts/:id/suggested-merges", adminController.getSuggestedMergesForTicket);
+
+// All AI suggested merges across all drafts
+router.get("/suggested-merges", adminController.getAllSuggestedMerges);
+
 export default router;

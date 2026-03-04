@@ -937,3 +937,36 @@ export const getAiAccuracyMetrics = async (dateFilter: Date | null) => {
     recent,
   };
 };
+
+// ===== ADD THESE FUNCTIONS TO THE BOTTOM OF db.service.ts =====
+
+export const getSuggestedMergesForTicket = async (ticketId: number) => {
+  return await prisma.suggestedMerge.findMany({
+    where: {
+      OR: [
+        { suggested_child_id: ticketId },
+        { suggested_parent_id: ticketId },
+      ]
+    },
+    include: {
+      suggested_parent: { select: { ticket_id: true, title: true, summary: true, created_at: true } },
+      suggested_child:  { select: { ticket_id: true, title: true, summary: true, created_at: true } },
+    }
+  });
+};
+
+export const getAllSuggestedMerges = async () => {
+  return await prisma.suggestedMerge.findMany({
+    include: {
+      suggested_parent: { select: { ticket_id: true, title: true, summary: true, status: { select: { name: true } } } },
+      suggested_child:  { select: { ticket_id: true, title: true, summary: true, status: { select: { name: true } } } },
+    },
+    orderBy: { created_at: 'desc' }
+  });
+};
+
+export const getTicketConfidence = async (ticketId: number) => {
+  return await prisma.aiTicketConfidence.findUnique({
+    where: { ticket_id: ticketId }
+  });
+};
