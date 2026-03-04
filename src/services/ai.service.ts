@@ -57,7 +57,9 @@ export class AiService {
           "priority": "Low" or "Medium" or "High" or "Critical",
           "summary": "2 sentences. First: core problem. Second: business impact. No first-person.",
           "suggested_solution": "1. Step one. 2. Step two. (single string)",
-          "topic_keywords": "2-3 words describing the technical domain e.g. network connectivity, payroll salary, software access"
+          "topic_keywords": "2-3 words describing the technical domain e.g. network connectivity, payroll salary, software access",
+          "category_confidence": <0-100, how confident you are in the category choice>,
+          "category_reason": "one sentence why this category fits"
         }
       `;
 
@@ -155,9 +157,87 @@ export class AiService {
         },
       });
 
-      console.log(
-        `✅ Background AI Processing Complete for Ticket #${ticketId}`,
-      );
+      // === SAVE CONFIDENCE SCORES ===
+      await prisma.aiTicketConfidence.upsert({
+        where: { ticket_id: ticketId },
+        update: {
+          assignment_confidence: data2.confidence ?? null,
+          assignment_reason:     data2.reason ?? null,
+          category_confidence:   data1.category_confidence ?? null,
+          category_reason:       data1.category_reason ?? null,
+        },
+        create: {
+          ticket_id:             ticketId,
+          assignment_confidence: data2.confidence ?? null,
+          assignment_reason:     data2.reason ?? null,
+          category_confidence:   data1.category_confidence ?? null,
+          category_reason:       data1.category_reason ?? null,
+        },
+      });
+      console.log(`📊 Confidence scores saved for Ticket #${ticketId}`);
+
+      // === CALL 3: Suggest merge with existing drafts ===
+      const recentDrafts = await prisma.ticket.findMany({
+        where: {
+          status: { name: 'Draft' },
+          ticket_id: { not: ticketId },
+          parent_ticket_id: null,
+        },
+        orderBy: { created_at: 'desc' },
+        take: 20,
+        select: { ticket_id: true, title: true, summary: true }
+      });
+
+      if (recentDrafts.length > 0) {
+        const call3Prompt = `
+          You are a helpdesk deduplication assistant.
+
+          New ticket topic: "${data1.topic_keywords}"
+          New ticket summary: "${data1.summary}"
+
+          Existing draft tickets:
+          ${JSON.stringify(recentDrafts)}
+
+          Task: Find any existing draft whose topic is essentially the same issue as the new ticket.
+          Only suggest a merge if the core problem is clearly the same — not just the same category.
+
+          Output strict JSON:
+          {
+            "should_merge": true or false,
+            "parent_ticket_id": <ticket_id of the best match, or null>,
+            "reason": "one sentence why they are the same issue"
+          }
+        `;
+
+        const response3 = await ollama.chat({
+          model: this.modelName,
+          format: "json",
+          messages: [{ role: "user", content: call3Prompt }],
+          options: { temperature: 0.1 },
+        });
+        const data3 = JSON.parse(response3.message.content);
+        console.log("🤖 Call 3 - Merge Suggestion:", data3);
+
+        if (data3.should_merge && data3.parent_ticket_id) {
+          await prisma.suggestedMerge.upsert({
+            where: {
+              suggested_parent_id_suggested_child_id: {
+                suggested_parent_id: data3.parent_ticket_id,
+                suggested_child_id:  ticketId,
+              }
+            },
+            update: { similarity_reason: data3.reason },
+            create: {
+              suggested_parent_id: data3.parent_ticket_id,
+              suggested_child_id:  ticketId,
+              similarity_reason:   data3.reason,
+            },
+          });
+          console.log(`🔀 Merge suggested: #${ticketId} → parent #${data3.parent_ticket_id}`);
+        }
+      }
+
+      console.log(`✅ Background AI Processing Complete for Ticket #${ticketId}`);
     } catch (error) {
       console.error(`❌ Background AI failed for Ticket #${ticketId}:`, error);
 
