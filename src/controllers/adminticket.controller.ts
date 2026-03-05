@@ -34,7 +34,7 @@ export const updateDraft = async (
     }
 
     const ticketId = parseInt(req.params.id, 10);
-    const { title, summary, suggested_solution, category_id, deadline } =
+    const { title, summary, suggested_solution, category_id, deadline, assignee_user_id } =
       req.body;
 
     // Validate ticket exists and is draft
@@ -44,10 +44,7 @@ export const updateDraft = async (
       return;
     }
 
-    if (ticket.status?.name !== "Draft") {
-      res.status(400).json({ error: "Only draft tickets can be updated" });
-      return;
-    }
+    // ===== Allow updating for all statuses (Draft, New, Assigned, Failed, etc.) =====
 
     // Validate inputs
     if (title && title.length > 100) {
@@ -68,12 +65,13 @@ export const updateDraft = async (
     if (summary) updateData.summary = summary;
     if (suggested_solution) updateData.suggested_solution = suggested_solution;
     if (category_id) updateData.category_id = category_id;
+    if (assignee_user_id) updateData.assignee_user_id = assignee_user_id;
     if (deadline) updateData.deadline = new Date(deadline);
 
     const updatedTicket = await dbService.updateTicket(ticketId, updateData);
 
     res.json({
-      message: "Draft ticket updated successfully",
+      message: "Ticket updated successfully",
       ticket: updatedTicket
     });
   } catch (err) {

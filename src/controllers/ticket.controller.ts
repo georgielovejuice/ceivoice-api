@@ -24,7 +24,7 @@ export const editDraftTicket = async (
 ): Promise<void> => {
   try {
     const { id } = req.params;
-    const { title, summary, category_id, suggested_solution } = req.body;
+    const { title, summary, category_id, suggested_solution, assignee_user_id } = req.body;
     const ticketId = Number.parseInt(id);
 
     // Get current ticket
@@ -34,10 +34,7 @@ export const editDraftTicket = async (
       return;
     }
 
-    if (ticket.status?.name !== "Draft") {
-      res.status(400).json({ error: "Only draft tickets can be edited" });
-      return;
-    }
+    // ===== Allow editing for all statuses (Draft, New, Assigned, Failed, etc.) =====
 
     // Validate title length
     if (title && title.length > 100) {
@@ -58,11 +55,12 @@ export const editDraftTicket = async (
       title: title || ticket.title,
       summary: summary || ticket.summary,
       category_id: category_id || ticket.category_id,
-      suggested_solution: suggested_solution || ticket.suggested_solution
+      suggested_solution: suggested_solution || ticket.suggested_solution,
+      assignee_user_id: assignee_user_id || ticket.assignee_user_id
     });
 
     res.json({
-      message: "Draft ticket updated successfully",
+      message: "Ticket updated successfully",
       ticket: updatedTicket
     });
   } catch (err) {
