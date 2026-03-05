@@ -268,6 +268,21 @@ export const assignTicketToUser = async (
       return;
     }
 
+    // ===== STATUS VALIDATION FOR REASSIGNMENT =====
+    // Only allow assignment for: Draft (1), New (2), Assigned (3), Failed (6)
+    // Block assignment for: Solving (4), Solved (5)
+    const reassignableStatuses = [1, 2, 3, 6]; // Draft, New, Assigned, Failed
+    const currentStatusId = ticket.status_id;
+
+    if (currentStatusId && !reassignableStatuses.includes(currentStatusId)) {
+      res.status(400).json({
+        error: `Cannot assign ticket with status "${ticket.status?.name}". Assignment is only allowed for Draft, New, Assigned, and Failed tickets.`,
+        current_status: ticket.status?.name,
+        current_status_id: currentStatusId
+      });
+      return;
+    }
+
     const oldAssigneeId = ticket.assignee_user_id || null;
     await dbService.assignTicket(ticketId, assignee_id);
     await dbService.createAssignmentHistory(
