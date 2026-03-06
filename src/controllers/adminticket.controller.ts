@@ -110,15 +110,19 @@ export const approveDraft = async (
     const now = new Date();
     const adminId = (req.user as UserProfile).user_id;
 
+    // Allow admin to set/update assignee during approval
+    const { assignee_user_id } = req.body;
+
     // Snapshot final values before status change for AI accuracy tracking
     const finalCategoryId = ticket.category_id ?? null;
-    const finalAssigneeId = ticket.assignee_user_id ?? null;
+    const finalAssigneeId = assignee_user_id ?? ticket.assignee_user_id ?? null;
 
     // Update parent ticket status to New with activation metadata
     await dbService.updateTicket(ticketId, {
       status_id: newStatusId,
       activated_at: now,
-      activated_by_id: adminId
+      activated_by_id: adminId,
+      ...(assignee_user_id ? { assignee_user_id } : {}),
     });
 
     // Record AI metric finals (if this ticket was AI-processed)
@@ -136,7 +140,8 @@ export const approveDraft = async (
       await dbService.updateTicket(child.ticket_id, {
         status_id: newStatusId,
         activated_at: now,
-        activated_by_id: adminId
+        activated_by_id: adminId,
+        ...(assignee_user_id ? { assignee_user_id } : {}),
       });
       await dbService.createStatusHistory(child.ticket_id, draftStatusId, newStatusId, adminId);
     }
@@ -460,7 +465,7 @@ export const unmergeTicket = async (
       ticket_id: childTicketId
     });
 
-    
+
   } catch (err) {
     const error = err as Error;
     console.error(err);
