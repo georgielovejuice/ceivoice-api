@@ -18,7 +18,7 @@ export class AiService {
       const agentMap: Record<number, string> = {};
 
       const agentList = availableAgents
-      .filter(a => a.scopes && a.scopes.length > 0)  // only agents with skills
+       // only agents with skills  .filter(a => a.scopes && a.scopes.length > 0)
       .map((a, index) => {
         agentMap[index] = a.user_id;
         return {
@@ -37,7 +37,7 @@ export class AiService {
         {
           id: UNASSIGNED_ID,
           name: "Unassigned Queue",
-          skills: "Use this if the request topic does not clearly match any other agent's skills."
+          skills: "Use this only if the request is truly impossible to handle (e.g., out of scope, confidential, requires external vendor)."
         }
       ];
 
