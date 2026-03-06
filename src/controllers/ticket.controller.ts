@@ -528,10 +528,7 @@ export const addComment = async (
       }
     }
 
-    res.status(201).json({
-      message: "Comment added successfully",
-      comment
-    });
+    res.status(201).json(comment);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Internal server error" });
