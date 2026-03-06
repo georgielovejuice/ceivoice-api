@@ -276,19 +276,20 @@ Return ONLY this JSON (no explanation, no markdown):
       });
 
       // ── CALL 3 — Suggest merge with existing drafts ─────────────────────────
-      const recentDrafts = await prisma.ticket.findMany({
-        where: {
-          status:           { name: "Draft" },
-          ticket_id:        { not: ticketId },
-          parent_ticket_id: null,
-        },
-        orderBy: { created_at: "desc" },
-        take:    20,
-        select:  { ticket_id: true, title: true, summary: true },
-      });
+      // ── CALL 3 — Suggest merge with existing drafts ─────────────────────────
+const recentDrafts = await prisma.ticket.findMany({
+  where: {
+    status:           { name: "Draft" },
+    ticket_id:        { not: ticketId },
+    parent_ticket_id: null,
+  },
+  orderBy: { created_at: "desc" },
+  take:    20,
+  select:  { ticket_id: true, title: true, summary: true },
+});
 
-      if (recentDrafts.length > 0) {
-        const call3Prompt = `
+if (recentDrafts.length > 0) {
+  const call3Prompt = `
 You are a helpdesk deduplication assistant.
 
 New ticket topic: "${data1.topic_keywords}"
@@ -297,52 +298,67 @@ New ticket summary: "${data1.summary}"
 Existing draft tickets:
 ${JSON.stringify(recentDrafts)}
 
-Task: Find any existing draft whose topic is essentially the same issue as the new ticket.
-Only suggest a merge if the core problem is clearly identical — not just the same category.
+Task: Find any existing draft that describes the IDENTICAL issue as the new ticket.
+To be considered identical, ALL of the following must be true:
+- Same affected system or tool (e.g. both about WiFi, both about login, both about payroll)
+- Same type of problem (e.g. both are connectivity failures, both are authentication errors)
+- Same symptoms described by the user
+
+Do NOT suggest a merge if:
+- They are only in the same general category (e.g. both are "hardware" but different devices)
+- One is a test ticket and the other is a real issue
+- The summaries are vague or generic with no specific matching symptoms
 
 Return ONLY this JSON (no explanation, no markdown):
 {
   "should_merge": true or false,
   "parent_ticket_id": <ticket_id of the best match, or null>,
-  "reason": "one sentence why they are the same issue"
+  "similarity_score": <integer 0-100, how identical the core problem is>,
+  "reason": "one sentence citing the specific shared system and symptoms"
 }
 `.trim();
 
-        const response3 = await ollama.chat({
-          model:    this.modelName,
-          format:   "json",
-          messages: [{ role: "user", content: call3Prompt }],
-          options:  { temperature: 0.1 },
-        });
+  const response3 = await ollama.chat({
+    model:    this.modelName,
+    format:   "json",
+    messages: [{ role: "user", content: call3Prompt }],
+    options:  { temperature: 0.1 },
+  });
 
-        const data3 = JSON.parse(response3.message.content);
+  const data3 = JSON.parse(response3.message.content);
+  console.log("[AI] Call 3 result:", data3);
 
-        if (data3.should_merge && data3.parent_ticket_id) {
-          await prisma.suggestedMerge.upsert({
-            where: {
-              suggested_parent_id_suggested_child_id: {
-                suggested_parent_id: data3.parent_ticket_id,
-                suggested_child_id:  ticketId,
-              },
-            },
-            update: { similarity_reason: data3.reason },
-            create: {
-              suggested_parent_id: data3.parent_ticket_id,
-              suggested_child_id:  ticketId,
-              similarity_reason:   data3.reason,
-            },
-          });
-        }
-      }
-    } catch (error) {
-      console.error(`❌ Background AI failed for Ticket #${ticketId}:`, error);
+  const MERGE_THRESHOLD = 80;
 
-      await prisma.ticket.update({
-        where: { ticket_id: ticketId },
-        data:  { summary: "AI processing failed. Please review manually." },
-      });
-    }
+  if (
+    data3.should_merge &&
+    data3.parent_ticket_id &&
+    (data3.similarity_score ?? 0) >= MERGE_THRESHOLD
+  ) {
+    await prisma.suggestedMerge.upsert({
+      where: {
+        suggested_parent_id_suggested_child_id: {
+          suggested_parent_id: data3.parent_ticket_id,
+          suggested_child_id:  ticketId,
+        },
+      },
+      update: { similarity_reason: data3.reason },
+      create: {
+        suggested_parent_id: data3.parent_ticket_id,
+        suggested_child_id:  ticketId,
+        similarity_reason:   data3.reason,
+      },
+    });
+
+    console.log(
+      `[AI] Merge suggested: parent=#${data3.parent_ticket_id} child=#${ticketId} score=${data3.similarity_score}`
+    );
+  } else {
+    console.log(
+      `[AI] No merge suggested for ticket #${ticketId} (score=${data3.similarity_score ?? "n/a"})`
+    );
   }
+}
 }
 
 export const aiService = new AiService();
