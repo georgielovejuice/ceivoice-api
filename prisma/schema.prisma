@@ -307,6 +307,8 @@ model SuggestedMerge {
   suggested_parent    Ticket   @relation("MergeParent", fields: [suggested_parent_id], references: [ticket_id], onDelete: Cascade)
   suggested_child     Ticket   @relation("MergeChild",  fields: [suggested_child_id],  references: [ticket_id], onDelete: Cascade)
 
+  is_merged            Boolean  @default(false)
+
   @@unique([suggested_parent_id, suggested_child_id])
   @@index([suggested_child_id])
   @@map("suggested_merges")

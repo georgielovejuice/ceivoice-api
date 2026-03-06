@@ -858,6 +858,13 @@ export const mergeTickets = async (parentTicketId: number, childTicketIds: numbe
         data: { parent_ticket_id: parentTicketId },
       });
       merged.push(updated);
+      await tx.suggestedMerge.updateMany({
+        where: {
+          suggested_parent_id: parentTicketId,
+          suggested_child_id: childId,
+        },
+        data: { is_merged: true }
+      });
     }
     return merged;
   });
@@ -943,6 +950,7 @@ export const getAiAccuracyMetrics = async (dateFilter: Date | null) => {
 export const getSuggestedMergesForTicket = async (ticketId: number) => {
   return await prisma.suggestedMerge.findMany({
     where: {
+      is_merged: false, // only show pending suggestions
       OR: [
         { suggested_child_id: ticketId },
         { suggested_parent_id: ticketId },
@@ -957,6 +965,7 @@ export const getSuggestedMergesForTicket = async (ticketId: number) => {
 
 export const getAllSuggestedMerges = async () => {
   return await prisma.suggestedMerge.findMany({
+    where: { is_merged: false }, // only show pending suggestions
     include: {
       suggested_parent: { select: { ticket_id: true, title: true, summary: true, status: { select: { name: true } } } },
       suggested_child:  { select: { ticket_id: true, title: true, summary: true, status: { select: { name: true } } } },
@@ -968,5 +977,16 @@ export const getAllSuggestedMerges = async () => {
 export const getTicketConfidence = async (ticketId: number) => {
   return await prisma.aiTicketConfidence.findUnique({
     where: { ticket_id: ticketId }
+  });
+};
+
+// Call this when admin actually executes a merge
+export const markSuggestedMergeAsDone = async (parentId: number, childId: number) => {
+  return await prisma.suggestedMerge.updateMany({
+    where: {
+      suggested_parent_id: parentId,
+      suggested_child_id: childId,
+    },
+    data: { is_merged: true }
   });
 };

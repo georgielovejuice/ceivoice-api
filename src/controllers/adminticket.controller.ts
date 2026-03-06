@@ -459,12 +459,16 @@ export const unmergeTicket = async (
       message: "Ticket unmerged successfully",
       ticket_id: childTicketId
     });
+
+    
   } catch (err) {
     const error = err as Error;
     console.error(err);
     res.status(500).json({ error: error.message });
   }
 };
+
+
 
 // ===== USER MANAGEMENT =====
 
