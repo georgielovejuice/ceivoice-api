@@ -276,20 +276,19 @@ Return ONLY this JSON (no explanation, no markdown):
       });
 
       // ── CALL 3 — Suggest merge with existing drafts ─────────────────────────
-      // ── CALL 3 — Suggest merge with existing drafts ─────────────────────────
-const recentDrafts = await prisma.ticket.findMany({
-  where: {
-    status:           { name: "Draft" },
-    ticket_id:        { not: ticketId },
-    parent_ticket_id: null,
-  },
-  orderBy: { created_at: "desc" },
-  take:    20,
-  select:  { ticket_id: true, title: true, summary: true },
-});
+      const recentDrafts = await prisma.ticket.findMany({
+        where: {
+          status:           { name: "Draft" },
+          ticket_id:        { not: ticketId },
+          parent_ticket_id: null,
+        },
+        orderBy: { created_at: "desc" },
+        take:    20,
+        select:  { ticket_id: true, title: true, summary: true },
+      });
 
-if (recentDrafts.length > 0) {
-  const call3Prompt = `
+      if (recentDrafts.length > 0) {
+        const call3Prompt = `
 You are a helpdesk deduplication assistant.
 
 New ticket topic: "${data1.topic_keywords}"
@@ -318,47 +317,53 @@ Return ONLY this JSON (no explanation, no markdown):
 }
 `.trim();
 
-  const response3 = await ollama.chat({
-    model:    this.modelName,
-    format:   "json",
-    messages: [{ role: "user", content: call3Prompt }],
-    options:  { temperature: 0.1 },
-  });
+        const response3 = await ollama.chat({
+          model:    this.modelName,
+          format:   "json",
+          messages: [{ role: "user", content: call3Prompt }],
+          options:  { temperature: 0.1 },
+        });
 
-  const data3 = JSON.parse(response3.message.content);
-  console.log("[AI] Call 3 result:", data3);
+        const data3 = JSON.parse(response3.message.content);
+        console.log("[AI] Call 3 result:", data3);
 
-  const MERGE_THRESHOLD = 80;
+        const MERGE_THRESHOLD = 80;
 
-  if (
-    data3.should_merge &&
-    data3.parent_ticket_id &&
-    (data3.similarity_score ?? 0) >= MERGE_THRESHOLD
-  ) {
-    await prisma.suggestedMerge.upsert({
-      where: {
-        suggested_parent_id_suggested_child_id: {
-          suggested_parent_id: data3.parent_ticket_id,
-          suggested_child_id:  ticketId,
-        },
-      },
-      update: { similarity_reason: data3.reason },
-      create: {
-        suggested_parent_id: data3.parent_ticket_id,
-        suggested_child_id:  ticketId,
-        similarity_reason:   data3.reason,
-      },
-    });
+        if (
+          data3.should_merge &&
+          data3.parent_ticket_id &&
+          (data3.similarity_score ?? 0) >= MERGE_THRESHOLD
+        ) {
+          await prisma.suggestedMerge.upsert({
+            where: {
+              suggested_parent_id_suggested_child_id: {
+                suggested_parent_id: data3.parent_ticket_id,
+                suggested_child_id:  ticketId,
+              },
+            },
+            update: { similarity_reason: data3.reason },
+            create: {
+              suggested_parent_id: data3.parent_ticket_id,
+              suggested_child_id:  ticketId,
+              similarity_reason:   data3.reason,
+            },
+          });
 
-    console.log(
-      `[AI] Merge suggested: parent=#${data3.parent_ticket_id} child=#${ticketId} score=${data3.similarity_score}`
-    );
-  } else {
-    console.log(
-      `[AI] No merge suggested for ticket #${ticketId} (score=${data3.similarity_score ?? "n/a"})`
-    );
+          console.log(
+            `[AI] Merge suggested: parent=#${data3.parent_ticket_id} child=#${ticketId} score=${data3.similarity_score}`
+          );
+        } else {
+          console.log(
+            `[AI] No merge suggested for ticket #${ticketId} (score=${data3.similarity_score ?? "n/a"})`
+          );
+        }
+      }
+
+    } catch (error) {
+      console.error("[AI] processTicketFull error:", error);
+      throw error;
+    }
   }
-}
 }
 
 export const aiService = new AiService();
