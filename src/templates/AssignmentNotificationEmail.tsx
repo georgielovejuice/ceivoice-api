@@ -57,8 +57,6 @@ export const AssignmentNotificationEmail: React.FC<
 
             <Row style={ctaSection}>
               <Button
-                pX={20}
-                pY={12}
                 style={button}
                 href={ticketUrl}
               >
@@ -153,6 +151,7 @@ const button = {
   display: "inline-block",
   cursor: "pointer",
   transition: "background-color 0.2s ease",
+  padding: "12px 20px",
 };
 
 const footer = {
