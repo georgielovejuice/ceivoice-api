@@ -1,6 +1,7 @@
 import React from "react";
 import {
   Body,
+  Button,
   Container,
   Head,
   Hr,
@@ -15,11 +16,13 @@ interface AssignmentNotificationEmailProps {
   ticketId: number;
   ticketTitle: string;
   assigneeName: string;
+  frontendUrl?: string;
 }
 
 export const AssignmentNotificationEmail: React.FC<
   AssignmentNotificationEmailProps
-> = ({ ticketId, ticketTitle, assigneeName }) => {
+> = ({ ticketId, ticketTitle, assigneeName, frontendUrl = "http://localhost:3000" }) => {
+  const ticketUrl = `${frontendUrl}/tickets/${ticketId}`;
   return (
     <Html>
       <Head />
@@ -52,9 +55,23 @@ export const AssignmentNotificationEmail: React.FC<
 
             <Hr style={hr} />
 
+            <Row style={ctaSection}>
+              <Button
+                pX={20}
+                pY={12}
+                style={button}
+                href={ticketUrl}
+              >
+                View Ticket
+              </Button>
+            </Row>
+
+            <Hr style={hr} />
+
             <Text style={paragraph}>
-              Please log in to the system to view the ticket details and start
-              working on it. The ticket is now visible in your dashboard.
+              Click the button above to view the ticket details and start
+              working on it. You can also log in to the system to see the ticket
+              in your dashboard.
             </Text>
 
             <Text style={footer}>
@@ -118,12 +135,28 @@ const label = {
 const value = {
   fontSize: "16px",
   fontWeight: "bold",
-  color: "#1a1a1a",
-  margin: "0",
+};
+
+const ctaSection = {
+  margin: "24px 0",
+  textAlign: "center" as const,
+};
+
+const button = {
+  backgroundColor: "#2563eb",
+  borderRadius: "6px",
+  color: "#ffffff",
+  fontSize: "16px",
+  fontWeight: "600",
+  textDecoration: "none",
+  textAlign: "center" as const,
+  display: "inline-block",
+  cursor: "pointer",
+  transition: "background-color 0.2s ease",
 };
 
 const footer = {
-  color: "#909090",
   fontSize: "12px",
-  margin: "0",
+  color: "#999999",
+  margin: "20px 0 0 0",
 };

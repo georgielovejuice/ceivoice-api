@@ -287,18 +287,43 @@ export const assignTicketToUser = async (
     }
 
     const oldAssigneeId = ticket.assignee_user_id || null;
-    await dbService.assignTicket(ticketId, assignee_id);
-    await dbService.createAssignmentHistory(
-      ticketId,
-      oldAssigneeId,
-      assignee_id,
-      (req.user as UserProfile).user_id
-    );
+    const adminUser = req.user as UserProfile;
+
+    // Perform assignment in parallel
+    await Promise.all([
+      dbService.assignTicket(ticketId, assignee_id),
+      dbService.createAssignmentHistory(
+        ticketId,
+        oldAssigneeId,
+        assignee_id,
+        adminUser.user_id
+      )
+    ]);
 
     // Update status to Assigned (3) if currently New (2)
     if (ticket.status?.name === "New") {
       await dbService.updateTicket(ticketId, { status_id: 3 });
     }
+
+    // Send notification to new assignee and create in-app notification
+    const newAssignee = await dbService.getUserById(assignee_id);
+    if (newAssignee?.email) {
+      // Queue email notification asynchronously (non-blocking)
+      emailService.sendAssignmentNotificationEmail(
+        newAssignee.email,
+        ticketId,
+        ticket.title || "Untitled Ticket",
+        newAssignee.full_name || "Support Team"
+      ).catch(err => console.error(`Failed to send assignment email to ${newAssignee.email}:`, err));
+    }
+
+    // Create in-app notification for new assignee
+    await dbService.createNotification(
+      ticketId,
+      assignee_id,
+      "assignment",
+      `You have been assigned to ticket: ${ticket.title || "Ticket #" + ticketId}`
+    );
 
     res.json({ message: "Ticket assigned successfully" });
   } catch (err) {

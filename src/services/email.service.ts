@@ -179,6 +179,7 @@ export const sendAssignmentNotificationEmail = async (
         ticketId,
         ticketTitle,
         assigneeName,
+        frontendUrl: FRONTEND_URL,
       })
     );
 
