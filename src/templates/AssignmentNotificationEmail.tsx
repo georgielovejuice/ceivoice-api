@@ -16,24 +16,26 @@ interface AssignmentNotificationEmailProps {
   ticketId: number;
   ticketTitle: string;
   assigneeName: string;
+  isReassignment?: boolean;
   frontendUrl?: string;
 }
 
 export const AssignmentNotificationEmail: React.FC<
   AssignmentNotificationEmailProps
-> = ({ ticketId, ticketTitle, assigneeName, frontendUrl = "http://localhost:3000" }) => {
+> = ({ ticketId, ticketTitle, assigneeName, isReassignment = false, frontendUrl = "http://localhost:3000" }) => {
   const ticketUrl = `${frontendUrl}/tickets/${ticketId}`;
   return (
     <Html>
       <Head />
-      <Preview>You have been assigned to Ticket #{String(ticketId)}</Preview>
+      <Preview>{isReassignment ? `You have been reassigned to Ticket #${String(ticketId)}` : `You have been assigned to Ticket #${String(ticketId)}`}</Preview>
       <Body style={main}>
         <Container style={container}>
           <Section style={box}>
-            <Text style={heading}>New Ticket Assignment</Text>
+            <Text style={heading}>{isReassignment ? "Ticket Reassignment" : "New Ticket Assignment"}</Text>
             <Text style={paragraph}>
-              You have been assigned to a new ticket that requires your
-              attention.
+              {isReassignment
+                ? "A ticket has been reassigned to you and requires your attention."
+                : "You have been assigned to a new ticket that requires your attention."}
             </Text>
 
             <Hr style={hr} />

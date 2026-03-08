@@ -19,7 +19,7 @@ const FROM_EMAIL = process.env.FROM_EMAIL || "noreply@mail.ceivoice.app";
 
 /**
  * Send confirmation email for new requests
- */
+*/
 export const sendConfirmationEmail = async (
   email: string,
   trackingId: string,
@@ -167,7 +167,8 @@ export const sendAssignmentNotificationEmail = async (
   email: string,
   ticketId: number,
   ticketTitle: string,
-  assigneeName: string
+  assigneeName: string,
+  isReassignment = false
 ): Promise<boolean> => {
   if (EMAIL_DISABLED) {
     console.log(`[Email disabled] Skipping assignment notification email to ${email}`);
@@ -179,6 +180,7 @@ export const sendAssignmentNotificationEmail = async (
         ticketId,
         ticketTitle,
         assigneeName,
+        isReassignment,
         frontendUrl: FRONTEND_URL,
       })
     );
@@ -188,10 +190,14 @@ export const sendAssignmentNotificationEmail = async (
       return false;
     }
 
+    const subject = isReassignment
+      ? `You have been reassigned to Ticket #${ticketId}`
+      : `You have been assigned to Ticket #${ticketId}`;
+
     const response = await resend.emails.send({
       from: FROM_EMAIL,
       to: email,
-      subject: `You have been assigned to Ticket #${ticketId}`,
+      subject,
       html: htmlContent,
     });
 

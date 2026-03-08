@@ -108,6 +108,7 @@ export const getTicketsByAssignee = async (assigneeId: string) => {
   return await prisma.ticket.findMany({
     where: {
       assignee_user_id: assigneeId,
+      parent_ticket_id: null, // Exclude merged children
       status_id: {
         notIn: [5, 6] // Exclude Solved (5) and Failed (6)
       }

@@ -446,7 +446,8 @@ export const assignTicket = async (
           assignee.email,
           ticketId,
           ticket.title || `Ticket #${ticketId}`,
-          assignee.full_name || assignee.user_name || "Support Team"
+          assignee.full_name || assignee.user_name || "Support Team",
+          !!oldAssigneeId
         );
       }
     } catch (err) {

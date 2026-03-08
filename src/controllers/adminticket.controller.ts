@@ -313,7 +313,8 @@ export const assignTicketToUser = async (
         newAssignee.email,
         ticketId,
         ticket.title || "Untitled Ticket",
-        newAssignee.full_name || "Support Team"
+        newAssignee.full_name || "Support Team",
+        !!oldAssigneeId
       ).catch(err => console.error(`Failed to send assignment email to ${newAssignee.email}:`, err));
     }
 
