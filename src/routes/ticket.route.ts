@@ -47,4 +47,10 @@ router.get("/id/:id/history", ticketController.getTicketHistory);
 router.post("/id/:id/followers", ticketController.addFollower);
 router.get("/id/:id/followers", ticketController.getFollowers);
 
+// Notifications (all authenticated roles)
+router.get("/notifications", ticketController.getNotifications);
+router.put("/notifications/read-all", ticketController.markAllNotificationsRead);
+router.put("/notifications/:id/read", ticketController.markNotificationRead);
+router.delete("/notifications/:id", ticketController.deleteNotification);
+
 export default router;

@@ -420,6 +420,19 @@ export const markNotificationAsRead = async (notificationId: number) => {
   });
 };
 
+export const markAllNotificationsAsRead = async (userId: string) => {
+  return await prisma.notification.updateMany({
+    where: { user_id: userId, is_read: false },
+    data: { is_read: true },
+  });
+};
+
+export const deleteNotification = async (notificationId: number) => {
+  return await prisma.notification.delete({
+    where: { notification_id: notificationId },
+  });
+};
+
 // ===== SCOPE SERVICE =====
 
 export const assignScope = async (assigneeId: string, scopeName: string) => {

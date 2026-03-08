@@ -639,6 +639,74 @@ export const getTicketHistory = async (
   }
 };
 
+// ===== NOTIFICATIONS =====
+
+export const getNotifications = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+    const notifications = await dbService.getUserNotifications(
+      (req.user as UserProfile).user_id
+    );
+    res.json(notifications);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const markNotificationRead = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const notificationId = parseInt(req.params.id, 10);
+    await dbService.markNotificationAsRead(notificationId);
+    res.json({ message: "Notification marked as read" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const markAllNotificationsRead = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+    await dbService.markAllNotificationsAsRead(
+      (req.user as UserProfile).user_id
+    );
+    res.json({ message: "All notifications marked as read" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const deleteNotification = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const notificationId = parseInt(req.params.id, 10);
+    await dbService.deleteNotification(notificationId);
+    res.json({ message: "Notification deleted" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 // ===== FOLLOWERS =====
 
 export const addFollower = async (
