@@ -92,6 +92,17 @@ export const addAssigneeScope = async (req: Request, res: Response): Promise<voi
   }
 };
 
+export const listAllScopes = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const scopes = await db.getAllScopes();
+    res.json({ scopes });
+  } catch (err) {
+    const error = err as Error;
+    console.error(err);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 export const removeAssigneeScope = async (req: Request, res: Response): Promise<void> => {
   try {
     const scopeId = Number.parseInt(req.params.scopeId, 10);

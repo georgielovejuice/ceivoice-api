@@ -224,6 +224,14 @@ model TicketRequest {
   @@schema("public")
 }
 
+model Scope {
+  scope_id   Int    @id @default(autoincrement())
+  scope_name String @unique @db.VarChar(50)
+
+  @@map("scopes")
+  @@schema("public")
+}
+
 model AssigneeScope {
   scope_id    Int    @id @default(autoincrement())
   assignee_id String @db.Uuid

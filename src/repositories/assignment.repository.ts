@@ -83,3 +83,7 @@ export const removeScopeById = async (scopeId: number) => {
     where: { scope_id: scopeId }
   });
 };
+
+export const getAllScopes = async () => {
+  return await prisma.scope.findMany({ orderBy: { scope_name: "asc" } });
+};
