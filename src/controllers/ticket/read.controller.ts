@@ -21,6 +21,7 @@ export const getTicketById = async (req: Request, res: Response): Promise<void> 
 
 export const getMyTickets = async (req: any, res: Response): Promise<void> => {
   try {
+    // Returns tickets with ticket_requests.request.message included for original message access
     const tickets = await db.getTicketsByCreator(req.user.user_id);
     res.json(tickets);
   } catch (err) {

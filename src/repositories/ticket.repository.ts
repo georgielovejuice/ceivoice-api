@@ -84,13 +84,18 @@ export const getTicketsByStatus = async (statusId: number) => {
   });
 };
 
+/**
+ * Get all tickets created by a specific user.
+ * Includes the original request message via ticket_requests relation.
+ */
 export const getTicketsByCreator = async (userId: string) => {
   return await prisma.ticket.findMany({
     where: { creator_user_id: userId },
     include: {
       status: true,
       category: true,
-      assignee: true
+      assignee: true,
+      ticket_requests: { include: { request: true } }
     },
     orderBy: { created_at: "desc" }
   });
