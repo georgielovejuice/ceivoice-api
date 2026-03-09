@@ -1,87 +1,40 @@
 import { Request, Response } from "express";
-import type { UserProfile } from "../types";
-import * as dbService from "../services/db.service";
+import * as db from "../repositories";
 import * as emailService from "../services/email.service";
+import { STATUS_ID, RESOLVED_STATUS_IDS } from "../constants/ticketStatus";
 
 // ===== DRAFT ACTIVATION (Admin Only) =====
 // Workflow: Draft → New (UAT-ADM-003)
 
-export const activateDraft = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const activateDraft = async (req: Request, res: Response): Promise<void> => {
   try {
-    if (!req.user) {
-      res.status(401).json({ error: "Unauthorized" });
+    if (!req.user) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+    const ticketId = Number.parseInt(req.params.id, 10);
+    const adminId  = req.user.user_id;
+
+    const ticket = await db.getTicketById(ticketId);
+    if (!ticket) { res.status(404).json({ error: "Ticket not found" }); return; }
+
+    if (ticket.status_id !== STATUS_ID.DRAFT) {
+      res.status(400).json({ error: "Only Draft tickets can be activated", current_status_id: ticket.status_id });
       return;
     }
-
-    const ticketId = parseInt(req.params.id, 10);
-    const adminId = (req.user as UserProfile).user_id;
-
-    // Get ticket and verify it's in Draft status
-    const ticket = await dbService.getTicketById(ticketId);
-    if (!ticket) {
-      res.status(404).json({ error: "Ticket not found" });
-      return;
-    }
-
-    if (ticket.status_id !== 1) { // 1 = Draft
-      res.status(400).json({
-        error: "Only Draft tickets can be activated",
-        current_status_id: ticket.status_id
-      });
-      return;
-    }
-
-    // Validate required fields before activation
     if (!ticket.title || !ticket.summary) {
-      res.status(400).json({
-        error: "Ticket must have title and summary before activation"
-      });
+      res.status(400).json({ error: "Ticket must have title and summary before activation" });
       return;
     }
 
-    // Update ticket to New status (status_id: 2) with activation metadata
-    await dbService.updateTicket(ticketId, {
-      status_id: 2, // New
-      activated_at: new Date(),
-      activated_by_id: adminId
-    });
+    await db.updateTicket(ticketId, { status_id: STATUS_ID.NEW, activated_at: new Date(), activated_by_id: adminId });
+    await db.createStatusHistory(ticketId, STATUS_ID.DRAFT, STATUS_ID.NEW, adminId, "Draft activated by Admin");
 
-    // Record status history
-    await dbService.createStatusHistory(
-      ticketId,
-      1, // Old status: Draft
-      2, // New status: New
-      adminId,
-      "Draft activated by Admin"
-    );
-
-    // Send confirmation email to all users who submitted this request
-    if (ticket.ticket_requests && ticket.ticket_requests.length > 0) {
-      for (const tr of ticket.ticket_requests) {
-        const request = tr.request;
-        if (request) {
-          await emailService.sendStatusChangeEmail(
-            request.email,
-            ticketId,
-            "New",
-            request.tracking_id
-          );
-        }
+    for (const tr of ticket.ticket_requests ?? []) {
+      if (tr.request) {
+        await emailService.sendStatusChangeEmail(tr.request.email, ticketId, "New", tr.request.tracking_id);
       }
     }
 
-    res.json({
-      message: "Draft ticket activated successfully",
-      ticket: {
-        ticket_id: ticketId,
-        status: "New",
-        activated_at: new Date(),
-        activated_by_id: adminId
-      }
-    });
+    res.json({ message: "Draft ticket activated successfully", ticket: { ticket_id: ticketId, status: "New", activated_at: new Date(), activated_by_id: adminId } });
   } catch (err) {
     console.error("Error activating draft:", err);
     res.status(500).json({ error: "Failed to activate draft ticket" });
@@ -90,105 +43,42 @@ export const activateDraft = async (
 
 // ===== TICKET RESOLUTION (Assignee/Admin) =====
 // Workflow: Any Status → Solved/Failed (UAT-WF-002)
-// Requires resolution comment
 
-export const resolveTicket = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const resolveTicket = async (req: Request, res: Response): Promise<void> => {
   try {
-    if (!req.user) {
-      res.status(401).json({ error: "Unauthorized" });
-      return;
-    }
+    if (!req.user) { res.status(401).json({ error: "Unauthorized" }); return; }
 
-    const ticketId = parseInt(req.params.id, 10);
+    const ticketId = Number.parseInt(req.params.id, 10);
     const { resolution_status, resolution_comment } = req.body;
-    const userId = (req.user as UserProfile).user_id;
+    const userId = req.user.user_id;
 
-    // Validate inputs
     if (!resolution_status || !["Solved", "Failed"].includes(resolution_status)) {
-      res.status(400).json({
-        error: "resolution_status must be 'Solved' or 'Failed'"
-      });
-      return;
+      res.status(400).json({ error: "resolution_status must be 'Solved' or 'Failed'" }); return;
+    }
+    if (!resolution_comment?.trim()) {
+      res.status(400).json({ error: "resolution_comment is required when resolving a ticket" }); return;
     }
 
-    if (!resolution_comment || resolution_comment.trim().length === 0) {
-      res.status(400).json({
-        error: "resolution_comment is required when resolving a ticket"
-      });
-      return;
+    const ticket = await db.getTicketById(ticketId);
+    if (!ticket) { res.status(404).json({ error: "Ticket not found" }); return; }
+
+    if (ticket.status_id !== null && RESOLVED_STATUS_IDS.includes(ticket.status_id)) {
+      res.status(400).json({ error: "Ticket is already resolved", current_status_id: ticket.status_id }); return;
     }
 
-    // Get ticket
-    const ticket = await dbService.getTicketById(ticketId);
-    if (!ticket) {
-      res.status(404).json({ error: "Ticket not found" });
-      return;
-    }
+    const comment = await db.addComment(ticketId, userId, resolution_comment, false);
+    const resolutionStatusId = resolution_status === "Solved" ? STATUS_ID.SOLVED : STATUS_ID.FAILED;
 
-    // Prevent re-resolving already resolved tickets
-    if ([5, 6].includes(ticket.status_id || 0)) { // 5 = Solved, 6 = Failed
-      res.status(400).json({
-        error: "Ticket is already resolved",
-        current_status_id: ticket.status_id
-      });
-      return;
-    }
+    await db.updateTicket(ticketId, { status_id: resolutionStatusId, resolved_at: new Date(), resolution_comment_id: comment.comment_id });
+    await db.createStatusHistory(ticketId, ticket.status_id || STATUS_ID.DRAFT, resolutionStatusId, userId, `Ticket resolved as ${resolution_status}`);
 
-    // Create resolution comment (always public for user visibility)
-    const comment = await dbService.addComment(
-      ticketId,
-      userId,
-      resolution_comment,
-      false // is_internal = false (public)
-    );
-
-    // Map resolution status string to ID
-    const statusIdMap: Record<string, number> = { "Solved": 5, "Failed": 6 };
-    const resolutionStatusId = statusIdMap[resolution_status];
-
-    // Update ticket with resolution
-    await dbService.updateTicket(ticketId, {
-      status_id: resolutionStatusId,
-      resolved_at: new Date(),
-      resolution_comment_id: comment.comment_id
-    });
-
-    // Record status history
-    await dbService.createStatusHistory(
-      ticketId,
-      ticket.status_id || 1,
-      resolutionStatusId,
-      userId,
-      `Ticket resolved as ${resolution_status}`
-    );
-
-    // Send final status email to all requesters
-    if (ticket.ticket_requests && ticket.ticket_requests.length > 0) {
-      for (const tr of ticket.ticket_requests) {
-        const request = tr.request;
-        if (request) {
-          await emailService.sendStatusChangeEmail(
-            request.email,
-            ticketId,
-            resolution_status,
-            request.tracking_id
-          );
-        }
+    for (const tr of ticket.ticket_requests ?? []) {
+      if (tr.request) {
+        await emailService.sendStatusChangeEmail(tr.request.email, ticketId, resolution_status, tr.request.tracking_id);
       }
     }
 
-    res.json({
-      message: `Ticket resolved as ${resolution_status}`,
-      ticket: {
-        ticket_id: ticketId,
-        status: resolution_status,
-        resolved_at: new Date(),
-        resolution_comment_id: comment.comment_id
-      }
-    });
+    res.json({ message: `Ticket resolved as ${resolution_status}`, ticket: { ticket_id: ticketId, status: resolution_status, resolved_at: new Date(), resolution_comment_id: comment.comment_id } });
   } catch (err) {
     console.error("Error resolving ticket:", err);
     res.status(500).json({ error: "Failed to resolve ticket" });
@@ -196,73 +86,29 @@ export const resolveTicket = async (
 };
 
 // ===== TICKET RENEWAL (Assignee/Admin) =====
-// Workflow: Solved/Failed → Renew (reopen ticket)
+// Workflow: Solved/Failed → Renew
 
-export const renewTicket = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const renewTicket = async (req: Request, res: Response): Promise<void> => {
   try {
-    if (!req.user) {
-      res.status(401).json({ error: "Unauthorized" });
-      return;
-    }
+    if (!req.user) { res.status(401).json({ error: "Unauthorized" }); return; }
 
-    const ticketId = parseInt(req.params.id, 10);
+    const ticketId = Number.parseInt(req.params.id, 10);
     const { reason } = req.body;
-    const userId = (req.user as UserProfile).user_id;
+    const userId = req.user.user_id;
 
-    // Get ticket
-    const ticket = await dbService.getTicketById(ticketId);
-    if (!ticket) {
-      res.status(404).json({ error: "Ticket not found" });
-      return;
+    const ticket = await db.getTicketById(ticketId);
+    if (!ticket) { res.status(404).json({ error: "Ticket not found" }); return; }
+
+    if (ticket.status_id === null || !RESOLVED_STATUS_IDS.includes(ticket.status_id)) {
+      res.status(400).json({ error: "Only Solved or Failed tickets can be renewed", current_status_id: ticket.status_id }); return;
     }
 
-    // Only allow renewal of resolved tickets
-    if (![5, 6].includes(ticket.status_id || 0)) { // 5 = Solved, 6 = Failed
-      res.status(400).json({
-        error: "Only Solved or Failed tickets can be renewed",
-        current_status_id: ticket.status_id
-      });
-      return;
-    }
+    await db.updateTicket(ticketId, { status_id: STATUS_ID.RENEW, resolved_at: null, resolution_comment_id: null });
+    await db.createStatusHistory(ticketId, ticket.status_id || STATUS_ID.DRAFT, STATUS_ID.RENEW, userId, reason || "Ticket reopened");
 
-    // Update ticket status to Renew (status_id: 7)
-    await dbService.updateTicket(ticketId, {
-      status_id: 7, // Renew
-      resolved_at: null, // Clear resolution timestamp
-      resolution_comment_id: null // Clear resolution comment link
-    });
+    if (reason) await db.addComment(ticketId, userId, `Ticket renewed: ${reason}`, true);
 
-    // Record status history
-    await dbService.createStatusHistory(
-      ticketId,
-      ticket.status_id || 1,
-      7, // Renew
-      userId,
-      reason || "Ticket reopened"
-    );
-
-    // Optionally create an internal comment
-    if (reason) {
-      await dbService.addComment(
-        ticketId,
-        userId,
-        `Ticket renewed: ${reason}`,
-        true // internal comment
-      );
-    }
-
-    res.json({
-      message: "Ticket renewed successfully",
-      ticket: {
-        ticket_id: ticketId,
-        status_id: 7, // Renew
-        status: "Renew",
-        previous_status_id: ticket.status_id
-      }
-    });
+    res.json({ message: "Ticket renewed successfully", ticket: { ticket_id: ticketId, status_id: STATUS_ID.RENEW, status: "Renew", previous_status_id: ticket.status_id } });
   } catch (err) {
     console.error("Error renewing ticket:", err);
     res.status(500).json({ error: "Failed to renew ticket" });

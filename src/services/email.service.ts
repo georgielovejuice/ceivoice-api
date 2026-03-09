@@ -5,7 +5,6 @@ import { ConfirmationEmail } from "../templates/ConfirmationEmail";
 import { StatusChangeEmail } from "../templates/StatusChangeEmail";
 import { CommentNotificationEmail } from "../templates/CommentNotificationEmail";
 import { AssignmentNotificationEmail } from "../templates/AssignmentNotificationEmail";
-import { queueService, EmailQueuePayload } from "./queue.service";
 
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
@@ -214,41 +213,3 @@ export const sendAssignmentNotificationEmail = async (
   }
 };
 
-/**
- * Process queued emails (for worker/consumer)
- */
-export const processQueuedEmails = async (): Promise<void> => {
-  try {
-    await queueService.connect();
-
-    await queueService.consumeEmails(async (payload: EmailQueuePayload) => {
-      const { type, email, data } = payload;
-
-      console.log(`Processing ${type} email for ${email}`);
-
-      switch (type) {
-        case "confirmation":
-          await sendConfirmationEmail(email, data.trackingId, data.ticketId);
-          break;
-
-        case "status_change":
-          await sendStatusChangeEmail(email, data.ticketId, data.newStatus, data.trackingId);
-          break;
-
-        case "comment_notification":
-          await sendCommentNotificationEmail(email, data.ticketId, data.commenterName, data.trackingId);
-          break;
-
-        case "assignment_notification":
-          await sendAssignmentNotificationEmail(email, data.ticketId, data.ticketTitle, data.assigneeName);
-          break;
-
-        default:
-          console.warn(`Unknown email type: ${type}`);
-      }
-    });
-  } catch (error) {
-    console.error("Error processing queued emails:", error);
-    throw error;
-  }
-};

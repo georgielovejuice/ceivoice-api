@@ -1,77 +1,8 @@
 import { Ollama } from "ollama";
-import { PrismaClient } from "@prisma/client";
+import prisma from "../lib/prisma";
 import config from "../config/environment";
 
-const prisma = new PrismaClient();
 const ollama = new Ollama({ host: config.ai.ollamaHost });
-
-// ─── Skill keyword hints for llama3b (small models need explicit guidance) ──────
-const SKILL_HINTS: Record<string, string[]> = {
-  storage:        ["storage", "disk", "drive", "hdd", "ssd", "nas", "space", "file", "quota", "capacity"],
-  network:        ["wifi", "wi-fi", "ethernet", "internet", "vpn", "connectivity", "network", "lan", "wan", "bandwidth", "ping"],
-  hr:             ["payroll", "leave", "salary", "onboard", "employee", "hr", "holiday", "benefit", "contract", "resign"],
-  authentication: ["login", "password", "mfa", "2fa", "sso", "account", "access", "locked", "credential", "sign in", "sign-in"],
-  software:       ["software", "app", "application", "install", "license", "update", "crash", "error", "program"],
-  hardware:       ["hardware", "laptop", "computer", "pc", "monitor", "keyboard", "mouse", "printer", "device", "screen"],
-  facilities:     ["room", "desk", "office", "ac", "air", "facilities", "chair", "building", "floor"],
-};
-
-// ─── Deterministic fallback: score each agent by skill-keyword overlap ────────
-function deterministicAgentMatch(
-  userMessage: string,
-  topicKeywords: string,
-  agentList: { id: number; name: string; skills: string }[],
-): { id: number; score: number } | null {
-  const haystack = `${userMessage} ${topicKeywords}`.toLowerCase();
-
-  let bestId = -1;
-  let bestScore = 0;
-
-  for (const agent of agentList) {
-    const agentSkills = agent.skills.toLowerCase().split(/,\s*/);
-    let score = 0;
-
-    for (const skill of agentSkills) {
-      // Direct skill name match in message
-      if (haystack.includes(skill)) {
-        score += 10;
-      }
-
-      // Keyword hint match
-      const hints = SKILL_HINTS[skill] ?? [];
-      for (const hint of hints) {
-        if (haystack.includes(hint)) {
-          score += 3;
-        }
-      }
-    }
-
-    if (score > bestScore) {
-      bestScore = score;
-      bestId = agent.id;
-    }
-  }
-
-  return bestScore > 0 ? { id: bestId, score: bestScore } : null;
-}
-
-// ─── Build a compact skill-hint block for the prompt ─────────────────────────
-function buildSkillHintBlock(agentList: { skills: string }[]): string {
-  const allSkills = [
-    ...new Set(
-      agentList.flatMap((a) => a.skills.toLowerCase().split(/,\s*/)),
-    ),
-  ];
-
-  return allSkills
-    .map((skill) => {
-      const hints = SKILL_HINTS[skill];
-      return hints
-        ? `- "${skill}" covers: ${hints.join(", ")}`
-        : `- "${skill}"`;
-    })
-    .join("\n");
-}
 
 // ─── Service ──────────────────────────────────────────────────────────────────
 export class AiService {
@@ -100,8 +31,8 @@ export class AiService {
 
       console.log("[AI] Agent list:", agentList);
 
-      const UNASSIGNED_ID       = -1;
-      const CONFIDENCE_THRESHOLD = agentList.length <= 3 ? 50 : 65; // more lenient for small pools
+      const UNASSIGNED_ID        = -1;
+      const CONFIDENCE_THRESHOLD = agentList.length <= 3 ? 50 : 65;
 
       const agentListWithUnassigned = [
         ...agentList,
@@ -111,8 +42,6 @@ export class AiService {
           skills: "Use ONLY if the issue is completely out of scope or no agent has any related skill.",
         },
       ];
-
-      const skillHintBlock = buildSkillHintBlock(agentList);
 
       // ── CALL 1 — Classify ticket ────────────────────────────────────────────
       const call1Prompt = `
@@ -148,29 +77,30 @@ Return ONLY this JSON (no explanation, no markdown):
 
       // ── CALL 2 — Assign agent ────────────────────────────────────────────────
       const call2Prompt = `
-You are a helpdesk dispatcher. Pick the best agent from the list below.
+You are a helpdesk dispatcher. Pick the best agent for this support request.
 
 User message: "${userMessage}"
 Topic keywords: "${data1.topic_keywords}"
+Ticket category: "${data1.category}"
 
-Skill reference (use this to match):
-${skillHintBlock}
-
-Agents:
+Agents and their skills:
 ${JSON.stringify(agentListWithUnassigned, null, 2)}
 
 Rules:
-1. Read the user message and topic keywords carefully.
-2. Use the skill reference above to find which agent's skill matches the topic.
-3. Even a loose keyword match is enough — pick the closest agent.
-4. Only pick Unassigned Queue (id: ${UNASSIGNED_ID}) if truly NO agent has any related skill.
-5. confidence: how sure you are (0–100). Any reasonable match should be >= 70.
+1. Read the user message carefully and understand the actual problem.
+2. Match the MEANING of the issue to the agent's skills — not just keywords.
+3. Example: "3D printer nozzle clogged" matches an agent with "hardware" or "facilities" skill.
+4. Example: "can't login to my account" matches an agent with "authentication" or "account" skill.
+5. Example: "wifi keeps dropping" matches an agent with "network" or "connectivity" skill.
+6. Pick the closest match even if not an exact word match.
+7. Only pick id: ${UNASSIGNED_ID} if truly NO agent has any remotely related skill.
+8. confidence: how sure you are (0-100). Any reasonable match should be >= 70.
 
 Return ONLY this JSON (no explanation, no markdown):
 {
   "assignee_id": <id number from the agents list>,
   "confidence": <integer 0-100>,
-  "reason": "one sentence explaining the skill match"
+  "reason": "one sentence explaining why this agent's skills match the issue"
 }
 `.trim();
 
@@ -182,34 +112,20 @@ Return ONLY this JSON (no explanation, no markdown):
       });
 
       const processingMs = Date.now() - t0;
-      const data2 = JSON.parse(response2.message.content);
+      const data2        = JSON.parse(response2.message.content);
       console.log("[AI] Call 2 result:", data2);
 
-      // ── Resolve final assignee (AI → deterministic fallback) ────────────────
+      // ── Resolve final assignee ──────────────────────────────────────────────
       let assigneeId: number;
 
       if (
         data2.assignee_id !== UNASSIGNED_ID &&
         data2.confidence >= CONFIDENCE_THRESHOLD
       ) {
-        // AI was confident enough
         assigneeId = data2.assignee_id;
       } else {
-        // AI was not confident — try deterministic fallback
-        const fallback = deterministicAgentMatch(
-          userMessage,
-          data1.topic_keywords,
-          agentList,
-        );
-
-        if (fallback) {
-          console.log(
-            `[AI] Using deterministic fallback → agent id=${fallback.id} score=${fallback.score}`,
-          );
-          assigneeId = fallback.id;
-        } else {
-          assigneeId = UNASSIGNED_ID;
-        }
+        console.log(`[AI] Low confidence (${data2.confidence}) → using Unassigned Queue`);
+        assigneeId = UNASSIGNED_ID;
       }
 
       // ── Map internal index back to user_id ─────────────────────────────────
@@ -234,10 +150,10 @@ Return ONLY this JSON (no explanation, no markdown):
       await prisma.ticket.update({
         where: { ticket_id: ticketId },
         data: {
-          title:              data1.title            ?? "New Support Request",
-          summary:            data1.summary          ?? "Summary generation failed.",
+          title:              data1.title    ?? "New Support Request",
+          summary:            data1.summary  ?? "Summary generation failed.",
           suggested_solution: solutionText,
-          priority:           data1.priority         ?? "Medium",
+          priority:           data1.priority ?? "Medium",
           assignee_user_id:   finalAssigneeId,
           category_id:        categoryRecord?.category_id,
         },
@@ -261,17 +177,17 @@ Return ONLY this JSON (no explanation, no markdown):
       await prisma.aiTicketConfidence.upsert({
         where:  { ticket_id: ticketId },
         update: {
-          assignment_confidence: data2.confidence         ?? null,
-          assignment_reason:     data2.reason             ?? null,
+          assignment_confidence: data2.confidence          ?? null,
+          assignment_reason:     data2.reason              ?? null,
           category_confidence:   data1.category_confidence ?? null,
-          category_reason:       data1.category_reason    ?? null,
+          category_reason:       data1.category_reason     ?? null,
         },
         create: {
           ticket_id:             ticketId,
-          assignment_confidence: data2.confidence         ?? null,
-          assignment_reason:     data2.reason             ?? null,
+          assignment_confidence: data2.confidence          ?? null,
+          assignment_reason:     data2.reason              ?? null,
           category_confidence:   data1.category_confidence ?? null,
-          category_reason:       data1.category_reason    ?? null,
+          category_reason:       data1.category_reason     ?? null,
         },
       });
 
@@ -350,11 +266,11 @@ Return ONLY this JSON (no explanation, no markdown):
           });
 
           console.log(
-            `[AI] Merge suggested: parent=#${data3.parent_ticket_id} child=#${ticketId} score=${data3.similarity_score}`
+            `[AI] Merge suggested: parent=#${data3.parent_ticket_id} child=#${ticketId} score=${data3.similarity_score}`,
           );
         } else {
           console.log(
-            `[AI] No merge suggested for ticket #${ticketId} (score=${data3.similarity_score ?? "n/a"})`
+            `[AI] No merge suggested for ticket #${ticketId} (score=${data3.similarity_score ?? "n/a"})`,
           );
         }
       }

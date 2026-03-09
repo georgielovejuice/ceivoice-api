@@ -36,12 +36,6 @@ supabase: {
     frontendUrl: process.env.FRONTEND_URL || "http://localhost:3000"
   },
 
-  // RabbitMQ Configuration
-  rabbitmq: {
-    url: process.env.RABBITMQ_URL || "amqp://localhost:5672",
-    enabled: process.env.RABBITMQ_ENABLED === "true" || process.env.NODE_ENV === "production"
-  },
-
   // AI / Ollama Configuration
   ai: {
     ollamaHost: process.env.OLLAMA_HOST || "http://localhost:11434",

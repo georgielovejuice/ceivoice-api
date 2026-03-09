@@ -51,18 +51,6 @@ export interface AiTicketDraft {
   assignee_id: string | null;
 }
 
-// ===== EMAIL QUEUE TYPES =====
-
-export interface EmailQueuePayload {
-  type:
-    | "confirmation"
-    | "status_change"
-    | "comment_notification"
-    | "assignment_notification";
-  email: string;
-  data: Record<string, any>;
-}
-
 // ===== EXPRESS AUGMENTATION =====
 
 declare global {
