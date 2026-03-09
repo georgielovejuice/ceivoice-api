@@ -94,6 +94,7 @@ export const getTicketsByCreator = async (userId: string) => {
     include: {
       status: true,
       category: true,
+      creator: true,
       assignee: true,
       ticket_requests: { include: { request: true } }
     },
