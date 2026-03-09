@@ -47,6 +47,8 @@ router.patch("/users/:userId/role", adminController.updateUserRole);
 
 // All available scopes
 router.get("/scopes", adminController.listAllScopes);
+router.post("/scopes", adminController.createScope);
+router.delete("/scopes/:scopeId", adminController.deleteScope);
 
 // Assignee scope management (EP06-ST002)
 router.get("/assignees/:assigneeId/scopes", adminController.getAssigneeScopes);

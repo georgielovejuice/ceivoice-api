@@ -95,7 +95,35 @@ export const addAssigneeScope = async (req: Request, res: Response): Promise<voi
 export const listAllScopes = async (_req: Request, res: Response): Promise<void> => {
   try {
     const scopes = await db.getAllScopes();
-    res.json({ scopes });
+    res.json(scopes);
+  } catch (err) {
+    const error = err as Error;
+    console.error(err);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const createScope = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { scope_name } = req.body;
+    if (!scope_name || typeof scope_name !== "string" || scope_name.trim().length === 0) {
+      res.status(400).json({ error: "scope_name must be a non-empty string" });
+      return;
+    }
+    const scope = await db.createScope(scope_name.trim());
+    res.status(201).json(scope);
+  } catch (err) {
+    const error = err as Error;
+    console.error(err);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const deleteScope = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const scopeId = Number.parseInt(req.params.scopeId, 10);
+    await db.deleteScopeFromCatalog(scopeId);
+    res.json({ message: "Scope deleted successfully", scope_id: scopeId });
   } catch (err) {
     const error = err as Error;
     console.error(err);

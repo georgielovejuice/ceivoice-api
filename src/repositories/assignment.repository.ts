@@ -87,3 +87,11 @@ export const removeScopeById = async (scopeId: number) => {
 export const getAllScopes = async () => {
   return await prisma.scope.findMany({ orderBy: { scope_name: "asc" } });
 };
+
+export const createScope = async (scopeName: string) => {
+  return await prisma.scope.create({ data: { scope_name: scopeName } });
+};
+
+export const deleteScopeFromCatalog = async (scopeId: number) => {
+  return await prisma.scope.delete({ where: { scope_id: scopeId } });
+};
