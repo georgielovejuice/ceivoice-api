@@ -131,6 +131,29 @@ export const renewTicket = async (req: Request, res: Response): Promise<void> =>
 
     if (reason) await db.addComment(ticketId, userId, `Ticket renewed: ${reason}`, true);
 
+    // Email → requester(s)
+    for (const tr of ticket.ticket_requests ?? []) {
+      if (tr.request) {
+        emailService.sendStatusChangeEmail(tr.request.email, ticketId, "Renew", tr.request.tracking_id)
+          .catch((err) => console.warn("Failed to send renew status email:", err));
+      }
+    }
+
+    // In-app notification → all followers, excluding the person making the change
+    db.getFollowers(ticketId).then((followers) => {
+      const targets = followers.filter((f) => f.user_id !== userId);
+      return Promise.allSettled(
+        targets.map((f) =>
+          db.createNotification(
+            ticketId,
+            f.user_id,
+            "status_change",
+            `Ticket #${ticketId} has been renewed`
+          ).catch((err) => console.warn("Failed to create renew notification:", err))
+        )
+      );
+    }).catch((err) => console.warn("Failed to fetch followers for renew notification:", err));
+
     res.json({ message: "Ticket renewed successfully", ticket: { ticket_id: ticketId, status_id: STATUS_ID.RENEW, status: "Renew", previous_status_id: ticket.status_id } });
   } catch (err) {
     console.error("Error renewing ticket:", err);
