@@ -1,4 +1,5 @@
 import prisma from "../lib/prisma";
+import { STATUS_ID } from "../constants/ticketStatus";
 
 export const getAllAssignees = async () => {
   return await prisma.user.findMany({
