@@ -44,20 +44,21 @@ export const activateDraft = async (req: Request, res: Response): Promise<void> 
       ).catch((err) => console.warn("Failed to create assignment notification:", err));
     }
 
-    // In-app notification → USER followers only (admin made this change, no need to notify ADMIN/ASSIGNEE)
-    db.getFollowers(ticketId).then((followers) => {
-      const targets = followers.filter((f) => f.user?.role === "USER");
-      return Promise.allSettled(
-        targets.map((f) =>
+    // In-app notification → request creator(s) with USER role directly
+    // (addRequestCreatorsAsFollowers is not called in this path, so look up by email explicitly)
+    for (const tr of ticket.ticket_requests ?? []) {
+      if (!tr.request?.email) continue;
+      db.getUserByEmail(tr.request.email).then((user) => {
+        if (user && user.role === "USER") {
           db.createNotification(
             ticketId,
-            f.user_id,
+            user.user_id,
             "status_change",
             `Ticket #${ticketId} is now active`
-          ).catch((err) => console.warn("Failed to create status_change notification:", err))
-        )
-      );
-    }).catch((err) => console.warn("Failed to fetch followers for activate notification:", err));
+          ).catch((err) => console.warn("Failed to create status_change notification:", err));
+        }
+      }).catch((err) => console.warn("Failed to look up request creator for notification:", err));
+    }
 
     res.json({ message: "Draft ticket activated successfully", ticket: { ticket_id: ticketId, status: "New", activated_at: new Date(), activated_by_id: adminId } });
   } catch (err) {
