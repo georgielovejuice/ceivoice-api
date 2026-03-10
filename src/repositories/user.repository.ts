@@ -36,16 +36,16 @@ export const getAllUsers = async () => {
       where: { creator_user_id: { not: null } },
       _count: { ticket_id: true }
     }),
-    // Drafts reviewed = tickets activated (approved out of Draft) by this user
+    // Drafts reviewed (EP03-ST002) = any status change an admin made while ticket was in Draft
+    prisma.statusHistory.groupBy({
+      by: ["changed_by_id"],
+      where: { changed_by_id: { not: null }, old_status_id: STATUS_ID.DRAFT },
+      _count: { history_id: true }
+    }),
+    // Drafts submitted (EP03-ST006) = drafts this admin officially pushed to New status
     prisma.ticket.groupBy({
       by: ["activated_by_id"],
       where: { activated_by_id: { not: null } },
-      _count: { ticket_id: true }
-    }),
-    // Drafts submitted = tickets created by this user that are still in Draft
-    prisma.ticket.groupBy({
-      by: ["creator_user_id"],
-      where: { creator_user_id: { not: null }, status_id: STATUS_ID.DRAFT },
       _count: { ticket_id: true }
     })
   ]);
@@ -54,8 +54,8 @@ export const getAllUsers = async () => {
   const activeMap          = new Map(activeGroups.map((r)          => [r.assignee_user_id,  r._count.ticket_id]));
   const resolvedMap        = new Map(resolvedGroups.map((r)        => [r.assignee_user_id,  r._count.ticket_id]));
   const submittedMap       = new Map(submittedGroups.map((r)       => [r.creator_user_id,   r._count.ticket_id]));
-  const draftsReviewedMap  = new Map(draftsReviewedGroups.map((r)  => [r.activated_by_id,   r._count.ticket_id]));
-  const draftsSubmittedMap = new Map(draftsSubmittedGroups.map((r) => [r.creator_user_id,   r._count.ticket_id]));
+  const draftsReviewedMap  = new Map(draftsReviewedGroups.map((r)  => [r.changed_by_id,     r._count.history_id]));
+  const draftsSubmittedMap = new Map(draftsSubmittedGroups.map((r) => [r.activated_by_id,   r._count.ticket_id]));
 
   return users.map((user) => ({
     ...user,
