@@ -5,6 +5,8 @@ import { ConfirmationEmail } from "../templates/ConfirmationEmail";
 import { StatusChangeEmail } from "../templates/StatusChangeEmail";
 import { CommentNotificationEmail } from "../templates/CommentNotificationEmail";
 import { AssignmentNotificationEmail } from "../templates/AssignmentNotificationEmail";
+import { AdminDraftReadyEmail } from "../templates/AdminDraftReadyEmail";
+import { ReassignmentRemovedEmail } from "../templates/ReassignmentRemovedEmail";
 
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
@@ -209,6 +211,97 @@ export const sendAssignmentNotificationEmail = async (
     return true;
   } catch (error) {
     console.error("Error sending assignment notification email:", error);
+    return false;
+  }
+};
+
+/**
+ * Notify an admin that an AI-processed draft ticket is ready for review
+ */
+export const sendAdminDraftReadyEmail = async (
+  email: string,
+  ticketId: number,
+  ticketTitle: string
+): Promise<boolean> => {
+  if (EMAIL_DISABLED) {
+    console.log(`[Email disabled] Skipping draft-ready email to ${email}`);
+    return true;
+  }
+  try {
+    const htmlContent = await render(
+      React.createElement(AdminDraftReadyEmail, {
+        ticketId,
+        ticketTitle,
+        frontendUrl: FRONTEND_URL,
+      })
+    );
+
+    if (!resend) {
+      console.error("Resend client is not initialized. Check RESEND_API_KEY.");
+      return false;
+    }
+
+    const response = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: `Draft Ready for Review: Ticket #${ticketId}`,
+      html: htmlContent,
+    });
+
+    if (response.error) {
+      console.error("Error sending draft-ready email via Resend:", response.error);
+      return false;
+    }
+
+    console.log(`✓ Draft-ready email sent to ${email}`, response.data);
+    return true;
+  } catch (error) {
+    console.error("Error sending draft-ready email:", error);
+    return false;
+  }
+};
+
+/**
+ * Notify the removed assignee when they are unassigned from a ticket
+ */
+export const sendReassignmentRemovedEmail = async (
+  email: string,
+  ticketId: number,
+  ticketTitle: string
+): Promise<boolean> => {
+  if (EMAIL_DISABLED) {
+    console.log(`[Email disabled] Skipping reassignment-removed email to ${email}`);
+    return true;
+  }
+  try {
+    const htmlContent = await render(
+      React.createElement(ReassignmentRemovedEmail, {
+        ticketId,
+        ticketTitle,
+      })
+    );
+
+    if (!resend) {
+      console.error("Resend client is not initialized. Check RESEND_API_KEY.");
+      return false;
+    }
+
+    const response = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: `You have been removed from Ticket #${ticketId}`,
+      html: htmlContent,
+    });
+
+    if (response.error) {
+      console.error("Error sending reassignment-removed email via Resend:", response.error);
+      return false;
+    }
+
+    console.log(`✓ Reassignment-removed email sent to ${email}`, response.data);
+    return true;
+  } catch (error) {
+    console.error("Error sending reassignment-removed email:", error);
     return false;
   }
 };

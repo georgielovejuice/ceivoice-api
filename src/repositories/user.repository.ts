@@ -1,6 +1,13 @@
 import prisma from "../lib/prisma";
 import { STATUS_ID } from "../constants/ticketStatus";
 
+export const getAllAdmins = async () => {
+  return await prisma.user.findMany({
+    where: { role: "ADMIN" },
+    select: { user_id: true, email: true, full_name: true, user_name: true },
+  });
+};
+
 export const getAllAssignees = async () => {
   return await prisma.user.findMany({
     where: { role: "ASSIGNEE" },
