@@ -68,6 +68,25 @@ export const assignTicket = async (req: Request, res: Response): Promise<void> =
       `You have been ${oldAssigneeId ? "reassigned" : "assigned"} to ticket: ${ticket.title || `Ticket #${ticketId}`}`
     ).catch((err) => console.warn("Failed to create assignment notification:", err));
 
+    // Notify old assignee of removal when this is a reassignment
+    if (oldAssigneeId && oldAssigneeId !== assignee_id) {
+      db.getUserById(oldAssigneeId).then((oldAssignee) => {
+        if (oldAssignee?.email) {
+          emailService.sendReassignmentRemovedEmail(
+            oldAssignee.email,
+            ticketId,
+            ticket.title || `Ticket #${ticketId}`
+          ).catch((err) => console.warn("Failed to send removal email:", err));
+        }
+        db.createNotification(
+          ticketId,
+          oldAssigneeId,
+          "assignment_removed",
+          `You have been removed from ticket: ${ticket.title || `Ticket #${ticketId}`}`
+        ).catch((err) => console.warn("Failed to create removal notification:", err));
+      }).catch((err) => console.warn("Failed to fetch old assignee for removal notification:", err));
+    }
+
     res.json({ message: "Ticket assigned successfully" });
   } catch (err) {
     console.error(err);
