@@ -54,6 +54,9 @@ export const assignTicketToUser = async (req: Request, res: Response): Promise<v
       ).catch((err) => console.error(`Failed to send assignment email to ${newAssignee.email}:`, err));
     }
 
+    // Auto-add new assignee as follower so they receive all future fan-out notifications
+    await db.addFollower(ticketId, assignee_id);
+
     await db.createNotification(
       ticketId,
       assignee_id,

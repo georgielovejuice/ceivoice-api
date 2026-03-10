@@ -124,9 +124,11 @@ export const approveDraft = async (req: Request, res: Response): Promise<void> =
       await emailService.sendStatusChangeEmail(firstRequest.email, ticketId, "New", firstRequest.tracking_id);
     }
 
-    // In-app notification → assignee
+    // In-app notification → assignee (assignment type) + auto-add as follower
     const finalAssigneeId = assignee_user_id ?? ticket.assignee_user_id ?? null;
     if (finalAssigneeId) {
+      db.addFollower(ticketId, finalAssigneeId)
+        .catch((err) => console.warn("Failed to add assignee as follower:", err));
       db.createNotification(
         ticketId,
         finalAssigneeId,
@@ -134,6 +136,21 @@ export const approveDraft = async (req: Request, res: Response): Promise<void> =
         `New ticket assigned to you: ${ticket.title || `Ticket #${ticketId}`}`
       ).catch((err) => console.warn("Failed to create assignment notification:", err));
     }
+
+    // In-app notification → all followers (status_change), excluding the admin who approved
+    db.getFollowers(ticketId).then((followers) => {
+      const targets = followers.filter((f) => f.user_id !== adminId);
+      return Promise.allSettled(
+        targets.map((f) =>
+          db.createNotification(
+            ticketId,
+            f.user_id,
+            "status_change",
+            `Ticket #${ticketId} is now active`
+          ).catch((err) => console.warn("Failed to create status_change notification:", err))
+        )
+      );
+    }).catch((err) => console.warn("Failed to fetch followers for approve notification:", err));
 
     res.json({ message: "Draft ticket approved successfully", ticket_id: ticketId, new_status: "New" });
   } catch (err) {
