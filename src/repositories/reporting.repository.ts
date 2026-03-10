@@ -59,7 +59,6 @@ export const getAverageResolutionTime = async (dateFilter: Date | null) => {
   const where: any = {
     status_id: { in: [5, 6] }, // Solved (5) or Failed (6)
     resolved_at: { not: null },
-    activated_at: { not: null }
   };
 
   if (dateFilter) {
@@ -68,14 +67,15 @@ export const getAverageResolutionTime = async (dateFilter: Date | null) => {
 
   const tickets = await prisma.ticket.findMany({
     where,
-    select: { activated_at: true, resolved_at: true }
+    select: { activated_at: true, created_at: true, resolved_at: true }
   });
 
   if (tickets.length === 0) return 0;
 
   const totalHours = tickets.reduce((sum, ticket) => {
-    if (!ticket.activated_at || !ticket.resolved_at) return sum;
-    return sum + (ticket.resolved_at.getTime() - ticket.activated_at.getTime()) / (1000 * 60 * 60);
+    if (!ticket.resolved_at) return sum;
+    const start = ticket.activated_at ?? ticket.created_at;
+    return sum + (ticket.resolved_at.getTime() - start.getTime()) / (1000 * 60 * 60);
   }, 0);
 
   return parseFloat((totalHours / tickets.length).toFixed(2));
