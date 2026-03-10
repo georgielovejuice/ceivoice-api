@@ -198,7 +198,7 @@ Return ONLY this JSON (no explanation, no markdown):
           ticket_id:        { not: ticketId },
           parent_ticket_id: null,
         },
-        orderBy: { created_at: "desc" },
+        orderBy: { created_at: "asc" },
         take:    20,
         select:  { ticket_id: true, title: true, summary: true },
       });
