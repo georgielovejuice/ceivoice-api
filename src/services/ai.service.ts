@@ -51,9 +51,9 @@ Support request: "${userMessage}"
 Valid categories: ${JSON.stringify(availableCategoryNames)}
 
 PRIORITY RULES:
-- "Low": Minor issue, annoyance, or general question.
-- "Medium": Single user affected, workaround exists.
-- "High": Multiple users affected, or core work is blocked.
+- "Low": Information requests, how-to questions, or minor cosmetic annoyances. (Nothing is actually broken).
+- "Medium": A specific piece of hardware or software is BROKEN or failing, but it only affects ONE user (e.g., dead monitor, single app crash).
+- "High": Multiple users affected, or a user is completely blocked from doing their core job.
 - "Critical": Physical emergencies (e.g., fire, flood), total company-wide outages, or severe security breaches.
 
 Return ONLY this JSON (no explanation, no markdown):
