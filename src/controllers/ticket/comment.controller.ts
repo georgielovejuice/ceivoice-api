@@ -25,8 +25,11 @@ export const addComment = async (req: Request, res: Response): Promise<void> => 
       is_internal || false
     );
 
-    // Send email notification for public comments
+    // Email + in-app notifications for public comments
     if (!is_internal) {
+      const commenterId = (req.user as UserProfile).user_id;
+
+      // Email notification
       try {
         const ticket = await db.getTicketById(ticketId);
         const commenterEmail = (req.user as UserProfile).email || "Support Team";
@@ -40,8 +43,23 @@ export const addComment = async (req: Request, res: Response): Promise<void> => 
           }
         }
       } catch (err) {
-        console.warn("Error processing comment notification:", err);
+        console.warn("Error processing comment email notification:", err);
       }
+
+      // In-app notifications → all followers except the commenter
+      db.getFollowers(ticketId).then((followers) => {
+        const notifyPromises = followers
+          .filter((f) => f.user_id !== commenterId)
+          .map((f) =>
+            db.createNotification(
+              ticketId,
+              f.user_id,
+              "comment",
+              `New comment on ticket #${ticketId}`
+            ).catch((err) => console.warn("Failed to create comment notification:", err))
+          );
+        return Promise.allSettled(notifyPromises);
+      }).catch((err) => console.warn("Failed to fetch followers for comment notification:", err));
     }
 
     res.status(201).json(comment);
