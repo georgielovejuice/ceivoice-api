@@ -95,9 +95,21 @@ export const finaliseAiMetric = async (
     return;
   }
 
+  const categoryMatch      = finalCategoryId != null && existing.suggested_category_id != null
+    ? finalCategoryId === existing.suggested_category_id
+    : null;
+  const suggestionAccepted = finalAssigneeId != null && existing.suggested_assignee_id != null
+    ? finalAssigneeId === existing.suggested_assignee_id
+    : null;
+
   return await prisma.aiTicketMetric.update({
     where: { ticket_id: ticketId },
-    data: { final_category_id: finalCategoryId, final_assignee_id: finalAssigneeId }
+    data: {
+      final_category_id:  finalCategoryId,
+      final_assignee_id:  finalAssigneeId,
+      category_match:     categoryMatch,
+      suggestion_accepted: suggestionAccepted,
+    }
   });
 };
 
