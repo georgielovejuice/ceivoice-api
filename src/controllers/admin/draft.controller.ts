@@ -124,6 +124,17 @@ export const approveDraft = async (req: Request, res: Response): Promise<void> =
       await emailService.sendStatusChangeEmail(firstRequest.email, ticketId, "New", firstRequest.tracking_id);
     }
 
+    // In-app notification → assignee
+    const finalAssigneeId = assignee_user_id ?? ticket.assignee_user_id ?? null;
+    if (finalAssigneeId) {
+      db.createNotification(
+        ticketId,
+        finalAssigneeId,
+        "assignment",
+        `New ticket assigned to you: ${ticket.title || `Ticket #${ticketId}`}`
+      ).catch((err) => console.warn("Failed to create assignment notification:", err));
+    }
+
     res.json({ message: "Draft ticket approved successfully", ticket_id: ticketId, new_status: "New" });
   } catch (err) {
     const error = err as Error;
