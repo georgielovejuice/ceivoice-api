@@ -45,7 +45,7 @@ export const assignTicket = async (req: Request, res: Response): Promise<void> =
       await db.updateTicket(ticketId, { status_id: STATUS_ID.ASSIGNED });
     }
 
-    // Send reassignment notification email
+    // Email + in-app notification → new assignee
     try {
       const assignee = await db.getUserById(assignee_id);
       if (assignee?.email) {
@@ -60,6 +60,13 @@ export const assignTicket = async (req: Request, res: Response): Promise<void> =
     } catch (err) {
       console.warn("Failed to send reassignment notification email:", err);
     }
+
+    db.createNotification(
+      ticketId,
+      assignee_id,
+      "assignment",
+      `You have been ${oldAssigneeId ? "reassigned" : "assigned"} to ticket: ${ticket.title || `Ticket #${ticketId}`}`
+    ).catch((err) => console.warn("Failed to create assignment notification:", err));
 
     res.json({ message: "Ticket assigned successfully" });
   } catch (err) {
