@@ -137,9 +137,9 @@ export const approveDraft = async (req: Request, res: Response): Promise<void> =
       ).catch((err) => console.warn("Failed to create assignment notification:", err));
     }
 
-    // In-app notification → all followers (status_change), excluding the admin who approved
+    // In-app notification → USER followers only (admin made this change, no need to notify ADMIN/ASSIGNEE)
     db.getFollowers(ticketId).then((followers) => {
-      const targets = followers.filter((f) => f.user_id !== adminId);
+      const targets = followers.filter((f) => f.user?.role === "USER");
       return Promise.allSettled(
         targets.map((f) =>
           db.createNotification(
