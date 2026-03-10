@@ -182,8 +182,15 @@ export const updateStatus = async (req: Request, res: Response): Promise<void> =
       }
     }
 
-    // In-app notification → assignee (when status changes)
-    if (oldStatusId && newStatusId !== oldStatusId && ticket.assignee_user_id) {
+    // In-app notification → assignee only when someone else (e.g. admin) changes the status.
+    // Skip if the assignee is the one making the change — no self-notifications.
+    const changedByUser = req.user.user_id;
+    if (
+      oldStatusId &&
+      newStatusId !== oldStatusId &&
+      ticket.assignee_user_id &&
+      ticket.assignee_user_id !== changedByUser
+    ) {
       db.createNotification(
         ticketId,
         ticket.assignee_user_id,
