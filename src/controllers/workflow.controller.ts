@@ -34,6 +34,16 @@ export const activateDraft = async (req: Request, res: Response): Promise<void> 
       }
     }
 
+    // In-app notification → assignee
+    if (ticket.assignee_user_id) {
+      db.createNotification(
+        ticketId,
+        ticket.assignee_user_id,
+        "assignment",
+        `New ticket assigned to you: ${ticket.title || `Ticket #${ticketId}`}`
+      ).catch((err) => console.warn("Failed to create assignment notification:", err));
+    }
+
     res.json({ message: "Draft ticket activated successfully", ticket: { ticket_id: ticketId, status: "New", activated_at: new Date(), activated_by_id: adminId } });
   } catch (err) {
     console.error("Error activating draft:", err);
@@ -77,6 +87,19 @@ export const resolveTicket = async (req: Request, res: Response): Promise<void> 
         await emailService.sendStatusChangeEmail(tr.request.email, ticketId, resolution_status, tr.request.tracking_id);
       }
     }
+
+    // In-app notifications → all followers
+    db.getFollowers(ticketId).then((followers) => {
+      const notifyPromises = followers.map((f) =>
+        db.createNotification(
+          ticketId,
+          f.user_id,
+          "status_change",
+          `Ticket #${ticketId} has been ${resolution_status}`
+        ).catch((err) => console.warn("Failed to create status notification:", err))
+      );
+      return Promise.allSettled(notifyPromises);
+    }).catch((err) => console.warn("Failed to fetch followers for resolve notification:", err));
 
     res.json({ message: `Ticket resolved as ${resolution_status}`, ticket: { ticket_id: ticketId, status: resolution_status, resolved_at: new Date(), resolution_comment_id: comment.comment_id } });
   } catch (err) {
