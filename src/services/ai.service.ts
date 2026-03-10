@@ -50,6 +50,12 @@ You are a helpdesk ticket classifier. Analyze the support request below and retu
 Support request: "${userMessage}"
 Valid categories: ${JSON.stringify(availableCategoryNames)}
 
+PRIORITY RULES:
+- "Low": Minor issue, annoyance, or general question.
+- "Medium": Single user affected, workaround exists.
+- "High": Multiple users affected, or core work is blocked.
+- "Critical": Physical emergencies (e.g., fire, flood), total company-wide outages, or severe security breaches.
+
 Return ONLY this JSON (no explanation, no markdown):
 {
   "title": "Short concise title under 100 characters",
