@@ -256,23 +256,36 @@ Return ONLY this JSON (no explanation, no markdown):
           data3.parent_ticket_id &&
           (data3.similarity_score ?? 0) >= MERGE_THRESHOLD
         ) {
+          // Walk up the suggested-merge chain to find the ultimate root parent
+          let rootParentId: number = data3.parent_ticket_id;
+          const visited = new Set<number>();
+          while (!visited.has(rootParentId)) {
+            visited.add(rootParentId);
+            const existingSuggest = await prisma.suggestedMerge.findFirst({
+              where: { suggested_child_id: rootParentId, is_merged: false },
+              select: { suggested_parent_id: true },
+            });
+            if (!existingSuggest) break;
+            rootParentId = existingSuggest.suggested_parent_id;
+          }
+
           await prisma.suggestedMerge.upsert({
             where: {
               suggested_parent_id_suggested_child_id: {
-                suggested_parent_id: data3.parent_ticket_id,
+                suggested_parent_id: rootParentId,
                 suggested_child_id:  ticketId,
               },
             },
             update: { similarity_reason: data3.reason },
             create: {
-              suggested_parent_id: data3.parent_ticket_id,
+              suggested_parent_id: rootParentId,
               suggested_child_id:  ticketId,
               similarity_reason:   data3.reason,
             },
           });
 
           console.log(
-            `[AI] Merge suggested: parent=#${data3.parent_ticket_id} child=#${ticketId} score=${data3.similarity_score}`,
+            `[AI] Merge suggested: parent=#${rootParentId} (resolved from #${data3.parent_ticket_id}) child=#${ticketId} score=${data3.similarity_score}`,
           );
         } else {
           console.log(
