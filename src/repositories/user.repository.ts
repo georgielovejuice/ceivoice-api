@@ -16,7 +16,7 @@ export const getAllAssignees = async () => {
 export const getAllUsers = async () => {
   // Fetch users + bulk ticket-count aggregates in parallel (3 queries total,
   // not N×3) to avoid exhausting the Supabase session-mode connection pool.
-  const [users, activeGroups, resolvedGroups, submittedGroups] = await Promise.all([
+  const [users, activeGroups, resolvedGroups, submittedGroups, draftsReviewedGroups, draftsSubmittedGroups] = await Promise.all([
     prisma.user.findMany({
       include: { scopes: true },
       orderBy: { created_at: "desc" }
@@ -35,19 +35,35 @@ export const getAllUsers = async () => {
       by: ["creator_user_id"],
       where: { creator_user_id: { not: null } },
       _count: { ticket_id: true }
+    }),
+    // Drafts reviewed = tickets activated (approved out of Draft) by this user
+    prisma.ticket.groupBy({
+      by: ["activated_by_id"],
+      where: { activated_by_id: { not: null } },
+      _count: { ticket_id: true }
+    }),
+    // Drafts submitted = tickets created by this user that are still in Draft
+    prisma.ticket.groupBy({
+      by: ["creator_user_id"],
+      where: { creator_user_id: { not: null }, status_id: STATUS_ID.DRAFT },
+      _count: { ticket_id: true }
     })
   ]);
 
   // Build lookup maps for O(1) join
-  const activeMap    = new Map(activeGroups.map((r)    => [r.assignee_user_id, r._count.ticket_id]));
-  const resolvedMap  = new Map(resolvedGroups.map((r)  => [r.assignee_user_id, r._count.ticket_id]));
-  const submittedMap = new Map(submittedGroups.map((r) => [r.creator_user_id,  r._count.ticket_id]));
+  const activeMap          = new Map(activeGroups.map((r)          => [r.assignee_user_id,  r._count.ticket_id]));
+  const resolvedMap        = new Map(resolvedGroups.map((r)        => [r.assignee_user_id,  r._count.ticket_id]));
+  const submittedMap       = new Map(submittedGroups.map((r)       => [r.creator_user_id,   r._count.ticket_id]));
+  const draftsReviewedMap  = new Map(draftsReviewedGroups.map((r)  => [r.activated_by_id,   r._count.ticket_id]));
+  const draftsSubmittedMap = new Map(draftsSubmittedGroups.map((r) => [r.creator_user_id,   r._count.ticket_id]));
 
   return users.map((user) => ({
     ...user,
-    active_ticket_count: activeMap.get(user.user_id)    ?? 0,
-    resolved_count:      resolvedMap.get(user.user_id)  ?? 0,
-    submitted_count:     submittedMap.get(user.user_id) ?? 0
+    active_ticket_count: activeMap.get(user.user_id)          ?? 0,
+    resolved_count:      resolvedMap.get(user.user_id)        ?? 0,
+    submitted_count:     submittedMap.get(user.user_id)       ?? 0,
+    drafts_reviewed:     draftsReviewedMap.get(user.user_id)  ?? 0,
+    drafts_submitted:    draftsSubmittedMap.get(user.user_id) ?? 0
   }));
 };
 
