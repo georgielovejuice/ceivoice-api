@@ -182,6 +182,16 @@ export const updateStatus = async (req: Request, res: Response): Promise<void> =
       }
     }
 
+    // In-app notification → assignee (when status changes)
+    if (oldStatusId && newStatusId !== oldStatusId && ticket.assignee_user_id) {
+      db.createNotification(
+        ticketId,
+        ticket.assignee_user_id,
+        "status_change",
+        `Ticket #${ticketId} status changed to ${new_status}`
+      ).catch((err) => console.warn("Failed to create status notification:", err));
+    }
+
     res.json({ message: "Status updated successfully" });
   } catch (err) {
     const error = err as Error;
