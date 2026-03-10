@@ -47,6 +47,12 @@ export const addFollower = async (ticketId: number, userId: string) => {
   });
 };
 
+export const removeFollower = async (ticketId: number, userId: string) => {
+  return await prisma.follower.deleteMany({
+    where: { ticket_id: ticketId, user_id: userId }
+  });
+};
+
 export const getFollowers = async (ticketId: number) => {
   return await prisma.follower.findMany({
     where: { ticket_id: ticketId },
