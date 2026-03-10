@@ -63,29 +63,23 @@ export const submitRequest = async (req: Request, res: Response): Promise<void> 
     await db.updateTicket(ticket.ticket_id, { suggested_solution: solutionText, assignee_user_id: aiDraft.assignee_id });
     await db.linkRequestToTicket(ticket.ticket_id, newRequest.request_id);
 
-    // Fire-and-forget — full AI enrichment runs in background, then notify all admins
+    // Notify all admins immediately — draft is ready for review (before AI enrichment)
     const capturedTicketId = ticket.ticket_id;
-    aiService.processTicketFull(capturedTicketId, message, allCategories.map((c) => c.name), allAgents)
-      .then(async () => {
-        try {
-          const [updatedTicket, admins] = await Promise.all([
-            db.getTicketById(capturedTicketId),
-            db.getAllAdmins(),
-          ]);
-          const title = updatedTicket?.title || `Ticket #${capturedTicketId}`;
-          for (const admin of admins) {
-            if (admin.email) {
-              emailService.sendAdminDraftReadyEmail(admin.email, capturedTicketId, title)
-                .catch((err) => console.warn("Failed to send draft-ready email:", err));
-            }
-            db.createNotification(capturedTicketId, admin.user_id, "draft_ready",
-              `New draft ticket ready for review: ${title}`)
-              .catch((err) => console.warn("Failed to create draft_ready notification:", err));
-          }
-        } catch (err) {
-          console.warn("Failed to send draft-ready admin notifications:", err);
+    const draftTitle = aiDraft.title || `Ticket #${capturedTicketId}`;
+    db.getAllAdmins().then((admins) => {
+      for (const admin of admins) {
+        if (admin.email) {
+          emailService.sendAdminDraftReadyEmail(admin.email, capturedTicketId, draftTitle)
+            .catch((err) => console.warn("Failed to send draft-ready email:", err));
         }
-      })
+        db.createNotification(capturedTicketId, admin.user_id, "draft_ready",
+          `New draft ticket ready for review: ${draftTitle}`)
+          .catch((err) => console.warn("Failed to create draft_ready notification:", err));
+      }
+    }).catch((err) => console.warn("Failed to fetch admins for draft-ready notification:", err));
+
+    // Fire-and-forget — full AI enrichment runs in background
+    aiService.processTicketFull(capturedTicketId, message, allCategories.map((c) => c.name), allAgents)
       .catch((err: unknown) => console.error("❌ Background AI Worker failed:", err));
 
     // Fire-and-forget — confirmation email
