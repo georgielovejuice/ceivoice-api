@@ -34,7 +34,7 @@ export const activateDraft = async (req: Request, res: Response): Promise<void> 
       }
     }
 
-    // In-app notification → assignee
+    // In-app notification → assignee (assignment type)
     if (ticket.assignee_user_id) {
       db.createNotification(
         ticketId,
@@ -43,6 +43,21 @@ export const activateDraft = async (req: Request, res: Response): Promise<void> 
         `New ticket assigned to you: ${ticket.title || `Ticket #${ticketId}`}`
       ).catch((err) => console.warn("Failed to create assignment notification:", err));
     }
+
+    // In-app notification → all followers (status_change), excluding the admin who activated
+    db.getFollowers(ticketId).then((followers) => {
+      const targets = followers.filter((f) => f.user_id !== adminId);
+      return Promise.allSettled(
+        targets.map((f) =>
+          db.createNotification(
+            ticketId,
+            f.user_id,
+            "status_change",
+            `Ticket #${ticketId} is now active`
+          ).catch((err) => console.warn("Failed to create status_change notification:", err))
+        )
+      );
+    }).catch((err) => console.warn("Failed to fetch followers for activate notification:", err));
 
     res.json({ message: "Draft ticket activated successfully", ticket: { ticket_id: ticketId, status: "New", activated_at: new Date(), activated_by_id: adminId } });
   } catch (err) {
@@ -88,9 +103,10 @@ export const resolveTicket = async (req: Request, res: Response): Promise<void> 
       }
     }
 
-    // In-app notifications → all followers
+    // In-app notifications → USER followers only (ADMIN/ASSIGNEE are the ones resolving)
     db.getFollowers(ticketId).then((followers) => {
-      const notifyPromises = followers.map((f) =>
+      const targets = followers.filter((f) => f.user?.role === "USER");
+      const notifyPromises = targets.map((f) =>
         db.createNotification(
           ticketId,
           f.user_id,

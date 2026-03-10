@@ -61,6 +61,10 @@ export const assignTicket = async (req: Request, res: Response): Promise<void> =
       console.warn("Failed to send reassignment notification email:", err);
     }
 
+    // Auto-add new assignee as follower so they receive all future fan-out notifications
+    db.addFollower(ticketId, assignee_id)
+      .catch((err) => console.warn("Failed to add assignee as follower:", err));
+
     db.createNotification(
       ticketId,
       assignee_id,
