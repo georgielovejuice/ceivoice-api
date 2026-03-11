@@ -119,7 +119,7 @@ export const getAiAccuracyMetrics = async (dateFilter: Date | null) => {
       prisma.aiTicketMetric.count({ where: { ...where, suggestion_accepted: true } }),
       prisma.aiTicketMetric.count({ where: { ...where, final_category_id: { not: null } } }),
       prisma.aiTicketMetric.findMany({
-        where,
+        where: { ...where, ticket: { ticket_id: { gt: 0 } } },
         orderBy: { processed_at: "desc" },
         take: 10,
         include: {
