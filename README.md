@@ -1,5 +1,7 @@
 # CeiVoice API — Backend
 
+> Repository: https://github.com/georgielovejuice/ceivoice-api
+
 REST API backend for CeiVoice, a voice-of-the-employee ticket management platform. Built with **Express.js**, **TypeScript**, **Prisma ORM**, and **Supabase** for authentication and database.
 
 ---
