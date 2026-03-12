@@ -28,7 +28,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/georgielovejuice/test-ceivoice-backend-database.git"
+    "url": "git+https://github.com/georgielovejuice/ceivoice-api.git"
   },
   "keywords": [
     "express",
@@ -40,9 +40,9 @@
   "license": "ISC",
   "type": "commonjs",
   "bugs": {
-    "url": "https://github.com/georgielovejuice/test-ceivoice-backend-database/issues"
+    "url": "https://github.com/georgielovejuice/ceivoice-api/issues"
   },
-  "homepage": "https://github.com/georgielovejuice/test-ceivoice-backend-database#readme",
+  "homepage": "https://github.com/georgielovejuice/ceivoice-api#readme",
   "dependencies": {
     "@prisma/client": "^6.19.1",
     "@react-email/components": "^1.0.8",
